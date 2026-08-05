@@ -1,17 +1,17 @@
 const image = document.getElementById("model");
 
-const totalFrames = 144;
+const totalFrames = 298;
 
 // Automatic playback speed.
-// 30 means the viewer displays about 30 frames every second.
+// Raise this number for faster rotation.
 const autoplayFPS = 30;
 
-// Number of pixels dragged before moving one frame.
-// Lower = more responsive dragging.
-const dragSensitivity = 4;
+// Horizontal pixels required to move one frame.
+// Lower values make dragging more responsive.
+const dragSensitivity = 3;
 
-// Time before autoplay resumes after dragging.
-const resumeDelay = 1000;
+// Time before autoplay returns after interaction.
+const resumeDelay = 1200;
 
 let currentFrame = 1;
 let dragging = false;
@@ -53,11 +53,14 @@ function preloadFrames() {
 
             if (loadedCount === totalFrames) {
                 autoplayEnabled = true;
+                lastFrameTime = performance.now();
             }
         };
 
         preloadImage.onerror = () => {
-            console.error(`Could not load frame ${frame}`);
+            console.error(
+                `Could not load frame ${frame}: ${framePath(frame)}`
+            );
         };
 
         preloadImage.src = framePath(frame);
