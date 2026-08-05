@@ -1,19 +1,36 @@
+html,
 body {
     margin: 0;
+    padding: 0;
     background: transparent;
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+}
+
+body {
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-
 .viewer {
     width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
-
 
 .viewer img {
     width: 100%;
-    display: block;
+    height: auto;
     user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: auto;
+    cursor: grab;
+}
+
+.viewer img:active {
+    cursor: grabbing;
 }
