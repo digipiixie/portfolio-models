@@ -9,7 +9,7 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
     >
 
-    <title>Interactive 360 Model Viewer</title>
+    <title>DIGI PIXIE OS Character Viewer</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -18,6 +18,7 @@
 
     <main class="viewer" id="viewer">
 
+        <!-- Interactive character render -->
         <img
             id="model"
             class="model-image"
@@ -26,8 +27,11 @@
             draggable="false"
         >
 
-        <!-- Windows XP-style loading window -->
-        <div class="loading-screen" id="loadingScreen">
+        <!-- Loading window -->
+        <div
+            class="loading-screen"
+            id="loadingScreen"
+        >
 
             <div class="xp-window loading-window">
 
@@ -40,7 +44,7 @@
                     >
 
                     <span class="xp-titlebar-text">
-                        Character Loader
+                        DIGI PIXIE OS
                     </span>
 
                     <button
@@ -57,7 +61,7 @@
                 <div class="xp-window-content">
 
                     <div class="loading-message">
-                        Loading character data...
+                        Loading Character.FBX...
                     </div>
 
                     <div class="loading-track">
@@ -72,7 +76,7 @@
                     <div class="loading-bottom-row">
 
                         <span class="loading-status">
-                            Please wait
+                            Initializing preview...
                         </span>
 
                         <span
@@ -90,7 +94,116 @@
 
         </div>
 
-        <!-- Windows XP-style drag prompt -->
+        <!-- Character information window -->
+        <section class="xp-window character-file-window">
+
+            <div class="xp-titlebar">
+
+                <img
+                    class="xp-titlebar-icon"
+                    src="icons/Plant.png"
+                    alt=""
+                >
+
+                <span class="xp-titlebar-text">
+                    Character.FBX
+                </span>
+
+                <button
+                    class="xp-close-button"
+                    type="button"
+                    aria-label="Close"
+                    tabindex="-1"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <div class="character-file-content">
+
+                <div class="file-number">
+                    FILE 001
+                </div>
+
+                <div class="file-name">
+                    Character.FBX
+                </div>
+
+                <div class="character-divider"></div>
+
+                <div class="character-field">
+
+                    <span class="character-label">
+                        Status:
+                    </span>
+
+                    <span class="status-value">
+
+                        <span
+                            class="status-light"
+                            aria-hidden="true"
+                        ></span>
+
+                        ONLINE
+
+                    </span>
+
+                </div>
+
+                <div class="character-field">
+
+                    <span class="character-label">
+                        Occupation:
+                    </span>
+
+                    <span class="character-value">
+                        Student
+                    </span>
+
+                </div>
+
+                <div class="character-field">
+
+                    <span class="character-label">
+                        Best Friend:
+                    </span>
+
+                    <span class="character-value">
+                        Sneaky Cat
+                    </span>
+
+                </div>
+
+                <div class="character-field">
+
+                    <span class="character-label">
+                        Threat Level:
+                    </span>
+
+                    <span class="threat-level-low">
+                        Low ★☆☆☆☆
+                    </span>
+
+                </div>
+
+                <div class="character-field character-field-block">
+
+                    <span class="character-label">
+                        Behavior Notes:
+                    </span>
+
+                    <span class="character-value">
+                        Frequently buys cigarettes for sneaky cats with a suspended ID.
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- Drag instruction window -->
         <div
             class="drag-instruction xp-window"
             id="dragInstruction"
@@ -105,7 +218,7 @@
                 >
 
                 <span class="xp-titlebar-text">
-                    Model Controls
+                    DIGI PIXIE OS
                 </span>
 
                 <button
@@ -120,7 +233,13 @@
             </div>
 
             <div class="drag-window-content">
-                Click and drag to rotate
+
+                <strong>Inspect Character</strong>
+
+                <span>
+                    Click and drag to rotate
+                </span>
+
             </div>
 
         </div>
