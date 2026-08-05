@@ -665,15 +665,11 @@ button {
     }
 
     .character-file-window {
-        top: 2%;
-        left: 2%;
+    top: 2%;
+    left: 2%;
 
-        width: min(190px, 43%);
-
-        transform:
-            translateY(8px)
-            scale(0.96);
-    }
+    width: min(185px, 34%);
+}
 
     .viewer.is-ready .character-file-window {
         transform:
