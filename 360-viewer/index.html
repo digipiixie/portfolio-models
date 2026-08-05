@@ -11,12 +11,16 @@
 
     <title>DIGI PIXIE OS Character Viewer</title>
 
-    <link rel="stylesheet" href="style.css">
+    <!-- Version number prevents old cached CSS from loading -->
+    <link rel="stylesheet" href="style.css?v=10">
 </head>
 
 <body>
 
-    <main class="viewer" id="viewer">
+    <main
+        class="viewer"
+        id="viewer"
+    >
 
         <!-- Interactive character render -->
         <img
@@ -27,7 +31,10 @@
             draggable="false"
         >
 
-        <!-- Loading window -->
+        <!-- ==================================================
+             LOADING WINDOW
+        =================================================== -->
+
         <div
             class="loading-screen"
             id="loadingScreen"
@@ -97,8 +104,11 @@
 
         </div>
 
-        <!-- Character information window -->
-        <!-- Starts minimized -->
+        <!-- ==================================================
+             CHARACTER PROFILE WINDOW
+             Starts minimized
+        =================================================== -->
+
         <section
             class="xp-window character-file-window is-minimized"
             id="characterFileWindow"
@@ -121,7 +131,7 @@
                     class="xp-close-button functional-close"
                     type="button"
                     aria-label="Minimize Character.FBX window"
-                    data-minimize-window="characterFileWindow"
+                    id="minimizeCharacterButton"
                 >
                     ×
                 </button>
@@ -211,7 +221,10 @@
 
         </section>
 
-        <!-- Minimized Character.FBX taskbar button -->
+        <!-- ==================================================
+             MINIMIZED CHARACTER BUTTON
+        =================================================== -->
+
         <button
             class="minimized-file-button"
             id="characterFileButton"
@@ -232,7 +245,10 @@
 
         </button>
 
-        <!-- Drag instruction window -->
+        <!-- ==================================================
+             ROTATION INSTRUCTION WINDOW
+        =================================================== -->
+
         <div
             class="drag-instruction xp-window"
             id="dragInstruction"
@@ -252,9 +268,9 @@
 
                 <button
                     class="xp-close-button functional-close"
+                    id="closeInstructionButton"
                     type="button"
                     aria-label="Close rotation instructions"
-                    data-close-window="dragInstruction"
                 >
                     ×
                 </button>
@@ -272,39 +288,50 @@
                 </span>
 
                 <span class="mobile-instruction">
-                    Use the rotate buttons below
+                    Use the rotate buttons
                 </span>
 
             </div>
 
         </div>
 
-        
-<!-- Mobile rotation controls -->
-<div
-    class="mobile-rotation-controls"
-    id="mobileRotationControls"
-    aria-label="Character rotation controls"
->
+        <!-- ==================================================
+             MOBILE-ONLY ROTATION BUTTONS
+        =================================================== -->
 
-    <button
-        class="xp-control-button"
-        id="rotateLeftButton"
-        type="button"
-        aria-label="Rotate character left"
-    >
-        <span class="rotate-arrow">‹</span>
-        Rotate
-    </button>
+        <div
+            class="mobile-rotation-controls"
+            id="mobileRotationControls"
+            aria-label="Character rotation controls"
+        >
 
-    <button
-        class="xp-control-button"
-        id="rotateRightButton"
-        type="button"
-        aria-label="Rotate character right"
-    >
-        Rotate
-        <span class="rotate-arrow">›</span>
-    </button>
+            <button
+                class="xp-control-button"
+                id="rotateLeftButton"
+                type="button"
+                aria-label="Rotate character left"
+            >
+                <span class="rotate-arrow">‹</span>
+                Rotate
+            </button>
 
-</div>
+            <button
+                class="xp-control-button"
+                id="rotateRightButton"
+                type="button"
+                aria-label="Rotate character right"
+            >
+                Rotate
+                <span class="rotate-arrow">›</span>
+            </button>
+
+        </div>
+
+    </main>
+
+    <!-- Version number prevents old cached JavaScript from loading -->
+    <script src="script.js?v=10"></script>
+
+</body>
+
+</html>
