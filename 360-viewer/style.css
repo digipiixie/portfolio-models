@@ -697,7 +697,7 @@ button {
     }
 
     .character-field {
-        grid-template-columns: 68px 1fr;
+    grid-template-columns: 62px 1fr;
 
         gap: 4px;
         margin-bottom: 5px;
