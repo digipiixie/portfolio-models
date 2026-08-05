@@ -4,9 +4,6 @@
 ==========================================================
 MODEL SETTINGS
 ==========================================================
-
-For future model viewers, these are the main settings
-you will change.
 */
 
 const SETTINGS = {
@@ -18,49 +15,21 @@ const SETTINGS = {
     numberPadding: 4,
 
     autoplay: true,
-
-    /*
-    How quickly the model rotates automatically.
-
-    18 = slow
-    24 = balanced
-    30 = faster
-    */
     autoplayFPS: 24,
 
-    /*
-    Lower number = more sensitive dragging.
-
-    2 = very sensitive
-    3 = balanced
-    5 = slower dragging
-    */
     pixelsPerFrame: 3,
 
-    /*
-    Higher number = stronger momentum after releasing.
-    */
     inertiaMultiplier: 1,
-
-    /*
-    Smaller number = momentum lasts longer.
-
-    0.90 = stops fairly quickly
-    0.94 = balanced
-    0.97 = spins for longer
-    */
     inertiaFriction: 0.94,
 
-    /*
-    Time before automatic rotation resumes after dragging.
-    */
     autoplayResumeDelay: 1400,
+    instructionDuration: 5000,
 
     /*
-    How long the drag instruction remains visible
-    if the visitor does not interact.
+    Finger movement required before the viewer decides
+    whether the gesture is horizontal or vertical.
     */
-    instructionDuration: 5000
+    touchDirectionThreshold: 10
 };
 
 
@@ -70,8 +39,11 @@ PAGE ELEMENTS
 ==========================================================
 */
 
-const viewer = document.getElementById("viewer");
-const modelImage = document.getElementById("model");
+const viewer =
+    document.getElementById("viewer");
+
+const modelImage =
+    document.getElementById("model");
 
 const loadingScreen =
     document.getElementById("loadingScreen");
@@ -98,15 +70,30 @@ let framePosition = 1;
 let isDragging = false;
 let isReady = false;
 
+/*
+Touch gestures begin in a waiting state.
+
+The script waits to see whether the visitor moves
+mostly horizontally or vertically.
+*/
+let gesturePending = false;
+let gestureIsHorizontal = false;
+
+let pointerStartX = 0;
+let pointerStartY = 0;
+
 let previousPointerX = 0;
 let previousPointerTime = 0;
+
+let activePointerId = null;
 
 let inertiaVelocity = 0;
 
 let autoplayEnabled = false;
 let autoplayResumeTimer = null;
 
-let lastAnimationTime = performance.now();
+let lastAnimationTime =
+    performance.now();
 
 let loadedFrameCount = 0;
 let failedFrameCount = 0;
@@ -143,7 +130,8 @@ FRAME HELPERS
 */
 
 function wrapFramePosition(position) {
-    const frameCount = SETTINGS.totalFrames;
+    const frameCount =
+        SETTINGS.totalFrames;
 
     while (position < 1) {
         position += frameCount;
@@ -182,7 +170,8 @@ LOADING
 
 function updateLoadingDisplay() {
     const completedFrames =
-        loadedFrameCount + failedFrameCount;
+        loadedFrameCount +
+        failedFrameCount;
 
     const percentage =
         Math.round(
@@ -211,10 +200,20 @@ function finishLoading() {
 
     showFrame(1);
 
-    autoplayEnabled = SETTINGS.autoplay;
+    autoplayEnabled =
+        SETTINGS.autoplay;
 
     window.setTimeout(() => {
-        dragInstruction.classList.add("is-hidden");
+        if (
+            dragInstruction &&
+            !dragInstruction.classList.contains(
+                "is-closed"
+            )
+        ) {
+            dragInstruction.classList.add(
+                "is-hidden"
+            );
+        }
     }, SETTINGS.instructionDuration);
 }
 
@@ -225,7 +224,8 @@ function preloadAllFrames() {
         frameNumber <= SETTINGS.totalFrames;
         frameNumber++
     ) {
-        const preloadImage = new Image();
+        const preloadImage =
+            new Image();
 
         preloadImage.onload = () => {
             loadedFrameCount++;
@@ -267,7 +267,9 @@ function preloadAllFrames() {
         preloadImage.src =
             getFramePath(frameNumber);
 
-        preloadedImages.push(preloadImage);
+        preloadedImages.push(
+            preloadImage
+        );
     }
 }
 
@@ -311,7 +313,11 @@ DRAG INSTRUCTION
 */
 
 function hideDragInstruction() {
-    dragInstruction.classList.add("is-hidden");
+    if (dragInstruction) {
+        dragInstruction.classList.add(
+            "is-hidden"
+        );
+    }
 }
 
 
@@ -322,49 +328,102 @@ WINDOW CONTROLS
 */
 
 function closeWindow(windowElement) {
-
     if (
         !windowElement ||
-        windowElement.classList.contains("is-closing") ||
-        windowElement.classList.contains("is-closed")
+        windowElement.classList.contains(
+            "is-closing"
+        ) ||
+        windowElement.classList.contains(
+            "is-closed"
+        )
     ) {
         return;
     }
 
-    windowElement.classList.add("is-closing");
+    windowElement.classList.add(
+        "is-closing"
+    );
 
     window.setTimeout(() => {
+        windowElement.classList.remove(
+            "is-closing"
+        );
 
-        windowElement.classList.remove("is-closing");
-        windowElement.classList.add("is-closed");
-
+        windowElement.classList.add(
+            "is-closed"
+        );
     }, 180);
-
 }
+
 
 document
     .querySelectorAll("[data-close-window]")
     .forEach((button) => {
 
-        button.addEventListener("pointerdown", (event) => {
-            event.stopPropagation();
-        });
+        button.addEventListener(
+            "pointerdown",
+            (event) => {
+                event.stopPropagation();
+            }
+        );
 
-        button.addEventListener("click", (event) => {
+        button.addEventListener(
+            "click",
+            (event) => {
+                event.preventDefault();
+                event.stopPropagation();
 
-            event.preventDefault();
-            event.stopPropagation();
+                const target =
+                    document.getElementById(
+                        button.dataset.closeWindow
+                    );
 
-            const target =
-                document.getElementById(
-                    button.dataset.closeWindow
-                );
-
-            closeWindow(target);
-
-        });
-
+                closeWindow(target);
+            }
+        );
     });
+
+
+/*
+==========================================================
+START HORIZONTAL ROTATION
+==========================================================
+*/
+
+function beginRotation(event) {
+    isDragging = true;
+    gesturePending = false;
+    gestureIsHorizontal = true;
+
+    previousPointerX =
+        event.clientX;
+
+    previousPointerTime =
+        performance.now();
+
+    inertiaVelocity = 0;
+
+    pauseAutoplay();
+    hideDragInstruction();
+
+    viewer.classList.add(
+        "is-dragging"
+    );
+
+    /*
+    Pointer capture begins only after we know the visitor
+    intends to rotate rather than scroll vertically.
+    */
+    if (
+        !viewer.hasPointerCapture(
+            event.pointerId
+        )
+    ) {
+        viewer.setPointerCapture(
+            event.pointerId
+        );
+    }
+}
 
 
 /*
@@ -376,32 +435,50 @@ POINTER INTERACTION
 viewer.addEventListener(
     "pointerdown",
     (event) => {
-
         if (!isReady) {
             return;
         }
 
-        /* Don't start rotating when clicking a window */
-        if (event.target.closest(".xp-window")) {
+        /*
+        Clicking an XP window should not rotate the model.
+        */
+        if (
+            event.target.closest(
+                ".xp-window"
+            )
+        ) {
             return;
         }
 
-        isDragging = true;
+        activePointerId =
+            event.pointerId;
 
-        previousPointerX = event.clientX;
+        pointerStartX =
+            event.clientX;
+
+        pointerStartY =
+            event.clientY;
+
+        previousPointerX =
+            event.clientX;
+
         previousPointerTime =
             performance.now();
 
         inertiaVelocity = 0;
 
-        pauseAutoplay();
-        hideDragInstruction();
+        /*
+        Mouse users begin dragging immediately.
 
-        viewer.classList.add("is-dragging");
-
-        viewer.setPointerCapture(
-            event.pointerId
-        );
+        Touch and pen users first get direction detection,
+        allowing vertical Carrd scrolling.
+        */
+        if (event.pointerType === "mouse") {
+            beginRotation(event);
+        } else {
+            gesturePending = true;
+            gestureIsHorizontal = false;
+        }
     }
 );
 
@@ -409,9 +486,80 @@ viewer.addEventListener(
 viewer.addEventListener(
     "pointermove",
     (event) => {
-        if (!isDragging || !isReady) {
+        if (
+            event.pointerId !==
+            activePointerId
+        ) {
             return;
         }
+
+        /*
+        Decide whether a touch gesture is intended for
+        page scrolling or character rotation.
+        */
+        if (
+            gesturePending &&
+            !isDragging
+        ) {
+            const totalMovementX =
+                event.clientX -
+                pointerStartX;
+
+            const totalMovementY =
+                event.clientY -
+                pointerStartY;
+
+            const absoluteX =
+                Math.abs(totalMovementX);
+
+            const absoluteY =
+                Math.abs(totalMovementY);
+
+            const largestMovement =
+                Math.max(
+                    absoluteX,
+                    absoluteY
+                );
+
+            if (
+                largestMovement <
+                SETTINGS.touchDirectionThreshold
+            ) {
+                return;
+            }
+
+            /*
+            Vertical gesture:
+            cancel viewer interaction and let Carrd scroll.
+            */
+            if (absoluteY > absoluteX) {
+                gesturePending = false;
+                gestureIsHorizontal = false;
+                activePointerId = null;
+
+                return;
+            }
+
+            /*
+            Horizontal gesture:
+            begin rotating the character.
+            */
+            gestureIsHorizontal = true;
+            beginRotation(event);
+        }
+
+        if (
+            !isDragging ||
+            !isReady ||
+            !gestureIsHorizontal
+        ) {
+            return;
+        }
+
+        /*
+        Stop horizontal dragging from moving the page.
+        */
+        event.preventDefault();
 
         const currentTime =
             performance.now();
@@ -437,11 +585,6 @@ viewer.addEventListener(
                 frameMovement
             );
 
-        /*
-        Store movement speed as frames per millisecond.
-        This becomes the momentum after release.
-        */
-
         inertiaVelocity =
             (
                 frameMovement /
@@ -461,13 +604,20 @@ viewer.addEventListener(
 
 
 function stopDragging(event) {
+    gesturePending = false;
+    gestureIsHorizontal = false;
+
+    activePointerId = null;
+
     if (!isDragging) {
         return;
     }
 
     isDragging = false;
 
-    viewer.classList.remove("is-dragging");
+    viewer.classList.remove(
+        "is-dragging"
+    );
 
     if (
         event &&
@@ -566,9 +716,6 @@ function animationLoop(timestamp) {
     lastAnimationTime = timestamp;
 
     if (isReady && !isDragging) {
-        /*
-        Momentum after releasing the model.
-        */
 
         if (
             Math.abs(inertiaVelocity) >
@@ -595,10 +742,6 @@ function animationLoop(timestamp) {
             showFrame(framePosition);
         } else {
             inertiaVelocity = 0;
-
-            /*
-            Automatic idle rotation.
-            */
 
             if (autoplayEnabled) {
                 const framesPerMillisecond =
