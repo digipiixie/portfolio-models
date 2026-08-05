@@ -26,10 +26,14 @@ const SETTINGS = {
     instructionDuration: 5000,
 
     /*
-    Finger movement required before the viewer decides
-    whether the gesture is horizontal or vertical.
+    Number of frames moved by one mobile button tap.
     */
-    touchDirectionThreshold: 10
+    mobileButtonFrameStep: 8,
+
+    /*
+    Speed when a mobile rotate button is held down.
+    */
+    mobileHoldInterval: 70
 };
 
 
@@ -54,8 +58,23 @@ const loadingProgress =
 const loadingPercentage =
     document.getElementById("loadingPercentage");
 
+const loadingStatus =
+    document.getElementById("loadingStatus");
+
 const dragInstruction =
     document.getElementById("dragInstruction");
+
+const characterFileWindow =
+    document.getElementById("characterFileWindow");
+
+const characterFileButton =
+    document.getElementById("characterFileButton");
+
+const rotateLeftButton =
+    document.getElementById("rotateLeftButton");
+
+const rotateRightButton =
+    document.getElementById("rotateRightButton");
 
 
 /*
@@ -70,22 +89,8 @@ let framePosition = 1;
 let isDragging = false;
 let isReady = false;
 
-/*
-Touch gestures begin in a waiting state.
-
-The script waits to see whether the visitor moves
-mostly horizontally or vertically.
-*/
-let gesturePending = false;
-let gestureIsHorizontal = false;
-
-let pointerStartX = 0;
-let pointerStartY = 0;
-
 let previousPointerX = 0;
 let previousPointerTime = 0;
-
-let activePointerId = null;
 
 let inertiaVelocity = 0;
 
@@ -97,6 +102,8 @@ let lastAnimationTime =
 
 let loadedFrameCount = 0;
 let failedFrameCount = 0;
+
+let mobileHoldTimer = null;
 
 const preloadedImages = [];
 
@@ -162,6 +169,22 @@ function showFrame(frameNumber) {
 }
 
 
+function rotateByFrames(amount) {
+    pauseAutoplay();
+
+    inertiaVelocity = 0;
+
+    framePosition =
+        wrapFramePosition(
+            framePosition + amount
+        );
+
+    showFrame(framePosition);
+
+    scheduleAutoplayResume();
+}
+
+
 /*
 ==========================================================
 LOADING
@@ -186,6 +209,22 @@ function updateLoadingDisplay() {
 
     loadingPercentage.textContent =
         `${percentage}%`;
+
+    if (loadingStatus) {
+        if (percentage < 30) {
+            loadingStatus.textContent =
+                "Reading Character.FBX...";
+        } else if (percentage < 60) {
+            loadingStatus.textContent =
+                "Loading materials...";
+        } else if (percentage < 90) {
+            loadingStatus.textContent =
+                "Preparing viewport...";
+        } else {
+            loadingStatus.textContent =
+                "Almost ready...";
+        }
+    }
 }
 
 
@@ -323,7 +362,7 @@ function hideDragInstruction() {
 
 /*
 ==========================================================
-WINDOW CONTROLS
+GENERAL CLOSE BUTTON
 ==========================================================
 */
 
@@ -352,7 +391,7 @@ function closeWindow(windowElement) {
         windowElement.classList.add(
             "is-closed"
         );
-    }, 180);
+    }, 200);
 }
 
 
@@ -373,12 +412,17 @@ document
                 event.preventDefault();
                 event.stopPropagation();
 
-                const target =
-                    document.getElementById(
-                        button.dataset.closeWindow
+                const targetId =
+                    button.getAttribute(
+                        "data-close-window"
                     );
 
-                closeWindow(target);
+                const targetWindow =
+                    document.getElementById(
+                        targetId
+                    );
+
+                closeWindow(targetWindow);
             }
         );
     });
@@ -386,49 +430,137 @@ document
 
 /*
 ==========================================================
-START HORIZONTAL ROTATION
+CHARACTER FILE MINIMIZE / RESTORE
 ==========================================================
 */
 
-function beginRotation(event) {
-    isDragging = true;
-    gesturePending = false;
-    gestureIsHorizontal = true;
-
-    previousPointerX =
-        event.clientX;
-
-    previousPointerTime =
-        performance.now();
-
-    inertiaVelocity = 0;
-
-    pauseAutoplay();
-    hideDragInstruction();
-
-    viewer.classList.add(
-        "is-dragging"
-    );
-
-    /*
-    Pointer capture begins only after we know the visitor
-    intends to rotate rather than scroll vertically.
-    */
+function minimizeCharacterFile() {
     if (
-        !viewer.hasPointerCapture(
-            event.pointerId
+        !characterFileWindow ||
+        characterFileWindow.classList.contains(
+            "is-minimized"
         )
     ) {
-        viewer.setPointerCapture(
-            event.pointerId
-        );
+        return;
     }
+
+    characterFileWindow.classList.add(
+        "is-minimizing"
+    );
+
+    characterFileWindow.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    characterFileButton.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    window.setTimeout(() => {
+        characterFileWindow.classList.remove(
+            "is-minimizing"
+        );
+
+        characterFileWindow.classList.add(
+            "is-minimized"
+        );
+
+        characterFileButton.classList.remove(
+            "is-hidden"
+        );
+    }, 220);
 }
+
+
+function restoreCharacterFile() {
+    if (
+        !characterFileWindow ||
+        !characterFileWindow.classList.contains(
+            "is-minimized"
+        )
+    ) {
+        return;
+    }
+
+    characterFileButton.classList.add(
+        "is-hidden"
+    );
+
+    characterFileWindow.classList.remove(
+        "is-minimized"
+    );
+
+    characterFileWindow.classList.add(
+        "is-restoring"
+    );
+
+    characterFileWindow.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    characterFileButton.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    window.setTimeout(() => {
+        characterFileWindow.classList.remove(
+            "is-restoring"
+        );
+    }, 260);
+}
+
+
+document
+    .querySelectorAll("[data-minimize-window]")
+    .forEach((button) => {
+
+        button.addEventListener(
+            "pointerdown",
+            (event) => {
+                event.stopPropagation();
+            }
+        );
+
+        button.addEventListener(
+            "click",
+            (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const targetId =
+                    button.getAttribute(
+                        "data-minimize-window"
+                    );
+
+                if (
+                    targetId ===
+                    "characterFileWindow"
+                ) {
+                    minimizeCharacterFile();
+                }
+            }
+        );
+    });
+
+
+characterFileButton.addEventListener(
+    "click",
+    (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        restoreCharacterFile();
+    }
+);
 
 
 /*
 ==========================================================
-POINTER INTERACTION
+DESKTOP MOUSE ROTATION
 ==========================================================
 */
 
@@ -440,24 +572,29 @@ viewer.addEventListener(
         }
 
         /*
-        Clicking an XP window should not rotate the model.
+        Mobile and touch devices use buttons instead.
+        This guarantees vertical Carrd scrolling is free.
+        */
+        if (event.pointerType !== "mouse") {
+            return;
+        }
+
+        /*
+        Clicking any interface window or control
+        should not rotate the character.
         */
         if (
             event.target.closest(
                 ".xp-window"
+            ) ||
+            event.target.closest(
+                "button"
             )
         ) {
             return;
         }
 
-        activePointerId =
-            event.pointerId;
-
-        pointerStartX =
-            event.clientX;
-
-        pointerStartY =
-            event.clientY;
+        isDragging = true;
 
         previousPointerX =
             event.clientX;
@@ -467,18 +604,16 @@ viewer.addEventListener(
 
         inertiaVelocity = 0;
 
-        /*
-        Mouse users begin dragging immediately.
+        pauseAutoplay();
+        hideDragInstruction();
 
-        Touch and pen users first get direction detection,
-        allowing vertical Carrd scrolling.
-        */
-        if (event.pointerType === "mouse") {
-            beginRotation(event);
-        } else {
-            gesturePending = true;
-            gestureIsHorizontal = false;
-        }
+        viewer.classList.add(
+            "is-dragging"
+        );
+
+        viewer.setPointerCapture(
+            event.pointerId
+        );
     }
 );
 
@@ -487,79 +622,12 @@ viewer.addEventListener(
     "pointermove",
     (event) => {
         if (
-            event.pointerId !==
-            activePointerId
-        ) {
-            return;
-        }
-
-        /*
-        Decide whether a touch gesture is intended for
-        page scrolling or character rotation.
-        */
-        if (
-            gesturePending &&
-            !isDragging
-        ) {
-            const totalMovementX =
-                event.clientX -
-                pointerStartX;
-
-            const totalMovementY =
-                event.clientY -
-                pointerStartY;
-
-            const absoluteX =
-                Math.abs(totalMovementX);
-
-            const absoluteY =
-                Math.abs(totalMovementY);
-
-            const largestMovement =
-                Math.max(
-                    absoluteX,
-                    absoluteY
-                );
-
-            if (
-                largestMovement <
-                SETTINGS.touchDirectionThreshold
-            ) {
-                return;
-            }
-
-            /*
-            Vertical gesture:
-            cancel viewer interaction and let Carrd scroll.
-            */
-            if (absoluteY > absoluteX) {
-                gesturePending = false;
-                gestureIsHorizontal = false;
-                activePointerId = null;
-
-                return;
-            }
-
-            /*
-            Horizontal gesture:
-            begin rotating the character.
-            */
-            gestureIsHorizontal = true;
-            beginRotation(event);
-        }
-
-        if (
+            event.pointerType !== "mouse" ||
             !isDragging ||
-            !isReady ||
-            !gestureIsHorizontal
+            !isReady
         ) {
             return;
         }
-
-        /*
-        Stop horizontal dragging from moving the page.
-        */
-        event.preventDefault();
 
         const currentTime =
             performance.now();
@@ -604,11 +672,6 @@ viewer.addEventListener(
 
 
 function stopDragging(event) {
-    gesturePending = false;
-    gestureIsHorizontal = false;
-
-    activePointerId = null;
-
     if (!isDragging) {
         return;
     }
@@ -661,6 +724,106 @@ viewer.addEventListener(
 
 /*
 ==========================================================
+MOBILE ROTATION BUTTONS
+==========================================================
+*/
+
+function stopMobileHold() {
+    if (mobileHoldTimer !== null) {
+        window.clearInterval(
+            mobileHoldTimer
+        );
+
+        mobileHoldTimer = null;
+    }
+
+    rotateLeftButton.classList.remove(
+        "is-pressed"
+    );
+
+    rotateRightButton.classList.remove(
+        "is-pressed"
+    );
+}
+
+
+function startMobileHold(
+    button,
+    frameAmount
+) {
+    stopMobileHold();
+
+    button.classList.add(
+        "is-pressed"
+    );
+
+    rotateByFrames(frameAmount);
+
+    mobileHoldTimer =
+        window.setInterval(() => {
+            rotateByFrames(frameAmount);
+        }, SETTINGS.mobileHoldInterval);
+}
+
+
+rotateLeftButton.addEventListener(
+    "pointerdown",
+    (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        startMobileHold(
+            rotateLeftButton,
+            -SETTINGS.mobileButtonFrameStep
+        );
+    }
+);
+
+
+rotateRightButton.addEventListener(
+    "pointerdown",
+    (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        startMobileHold(
+            rotateRightButton,
+            SETTINGS.mobileButtonFrameStep
+        );
+    }
+);
+
+
+[
+    rotateLeftButton,
+    rotateRightButton
+].forEach((button) => {
+
+    button.addEventListener(
+        "pointerup",
+        stopMobileHold
+    );
+
+    button.addEventListener(
+        "pointercancel",
+        stopMobileHold
+    );
+
+    button.addEventListener(
+        "lostpointercapture",
+        stopMobileHold
+    );
+});
+
+
+window.addEventListener(
+    "pointerup",
+    stopMobileHold
+);
+
+
+/*
+==========================================================
 KEYBOARD SUPPORT
 ==========================================================
 */
@@ -673,27 +836,11 @@ window.addEventListener(
         }
 
         if (event.key === "ArrowLeft") {
-            pauseAutoplay();
-
-            framePosition =
-                wrapFramePosition(
-                    framePosition - 1
-                );
-
-            showFrame(framePosition);
-            scheduleAutoplayResume();
+            rotateByFrames(-1);
         }
 
         if (event.key === "ArrowRight") {
-            pauseAutoplay();
-
-            framePosition =
-                wrapFramePosition(
-                    framePosition + 1
-                );
-
-            showFrame(framePosition);
-            scheduleAutoplayResume();
+            rotateByFrames(1);
         }
     }
 );
