@@ -617,3 +617,97 @@ button {
         transition: none;
     }
 }
+/* ======================================================
+   CARRD EMBED LAYOUT FIX
+   Keeps the profile on the left and the character visible
+====================================================== */
+
+@media (max-width: 900px) {
+
+    /* Move the character toward the right side */
+    .model-image {
+        width: 88%;
+        height: 100%;
+
+        object-fit: contain;
+        object-position: 78% center;
+    }
+
+    /* Keep the Character.FBX window in the upper-left */
+    .character-file-window {
+        top: 3%;
+        left: 2%;
+
+        width: min(210px, 40%);
+
+        transform:
+            translateY(10px)
+            scale(0.96);
+    }
+
+    .viewer.is-ready .character-file-window {
+        transform:
+            translateY(0)
+            scale(1);
+    }
+}
+
+
+/* Extra adjustments for narrow phone-sized embeds */
+
+@media (max-width: 600px) {
+
+    .model-image {
+        width: 82%;
+        height: 100%;
+
+        object-position: 88% center;
+    }
+
+    .character-file-window {
+        top: 2%;
+        left: 2%;
+
+        width: min(190px, 43%);
+
+        transform:
+            translateY(8px)
+            scale(0.96);
+    }
+
+    .viewer.is-ready .character-file-window {
+        transform:
+            translateY(0)
+            scale(1);
+    }
+
+    .character-file-content {
+        padding: 9px 10px 10px;
+
+        font-size: 9px;
+        line-height: 1.35;
+    }
+
+    .file-number {
+        font-size: 8px;
+    }
+
+    .file-name {
+        font-size: 12px;
+    }
+
+    .character-divider {
+        margin: 7px 0 8px;
+    }
+
+    .character-field {
+        grid-template-columns: 68px 1fr;
+
+        gap: 4px;
+        margin-bottom: 5px;
+    }
+
+    .character-field-block {
+        display: flex;
+    }
+}
