@@ -50,6 +50,11 @@ button {
     background: transparent;
 
     cursor: grab;
+
+    /*
+    Vertical touch gestures are reserved for scrolling
+    the Carrd page.
+    */
     touch-action: pan-y;
 }
 
@@ -207,10 +212,10 @@ button {
         box-shadow 0.08s ease;
 }
 
-/* Functional red X buttons */
 .functional-close {
     cursor: pointer;
     pointer-events: auto;
+    touch-action: manipulation;
 }
 
 .functional-close:hover {
@@ -242,28 +247,8 @@ button {
     outline-offset: 1px;
 }
 
-/* Loading window X is decorative */
 .decorative-close {
     pointer-events: none;
-}
-
-/* Closing animation */
-.xp-window.is-closing {
-    opacity: 0 !important;
-
-    transform:
-        scale(0.88)
-        translateY(8px) !important;
-
-    transition:
-        opacity 0.2s ease,
-        transform 0.2s ease !important;
-
-    pointer-events: none !important;
-}
-
-.xp-window.is-closed {
-    display: none !important;
 }
 
 /* ======================================================
@@ -379,7 +364,7 @@ button {
     top: 4%;
     left: 4%;
 
-    z-index: 12;
+    z-index: 18;
 
     width: min(225px, 31%);
 
@@ -392,16 +377,71 @@ button {
     pointer-events: auto;
 
     transition:
-        opacity 0.35s ease 0.18s,
-        transform 0.35s ease 0.18s;
+        opacity 0.24s ease,
+        transform 0.24s ease,
+        visibility 0.24s ease;
 }
 
-.viewer.is-ready .character-file-window {
+.viewer.is-ready
+.character-file-window:not(.is-minimized) {
     opacity: 1;
 
     transform:
         translateY(0)
         scale(1);
+}
+
+.character-file-window.is-minimizing {
+    opacity: 0;
+
+    transform:
+        translateY(14px)
+        scale(0.84);
+
+    pointer-events: none;
+}
+
+.character-file-window.is-minimized {
+    opacity: 0;
+
+    visibility: hidden;
+
+    transform:
+        translateY(16px)
+        scale(0.8);
+
+    pointer-events: none;
+}
+
+.character-file-window.is-restoring {
+    animation:
+        restore-window 0.25s ease both;
+}
+
+@keyframes restore-window {
+    0% {
+        opacity: 0;
+
+        transform:
+            translateY(12px)
+            scale(0.84);
+    }
+
+    70% {
+        opacity: 1;
+
+        transform:
+            translateY(-2px)
+            scale(1.015);
+    }
+
+    100% {
+        opacity: 1;
+
+        transform:
+            translateY(0)
+            scale(1);
+    }
 }
 
 .character-file-content {
@@ -497,8 +537,7 @@ button {
 
     flex-shrink: 0;
 
-    border:
-        1px solid #095d09;
+    border: 1px solid #095d09;
 
     border-radius: 50%;
 
@@ -513,6 +552,98 @@ button {
     color: #ff9ccf;
 
     font-weight: bold;
+}
+
+/* ======================================================
+   MINIMIZED CHARACTER FILE BUTTON
+====================================================== */
+
+.minimized-file-button {
+    position: absolute;
+
+    left: 2%;
+    bottom: 2%;
+
+    z-index: 20;
+
+    min-width: 145px;
+    height: 30px;
+
+    padding:
+        3px 10px 3px 6px;
+
+    display: flex;
+    align-items: center;
+
+    border:
+        1px solid #003c74;
+
+    border-radius:
+        3px 3px 0 0;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #3c9dff 0%,
+            #1476e5 48%,
+            #0757bd 52%,
+            #2c84e8 100%
+        );
+
+    box-shadow:
+        inset 1px 1px 1px rgba(255, 255, 255, 0.5),
+        1px 2px 4px rgba(0, 0, 0, 0.25);
+
+    color: white;
+
+    font-size: 11px;
+    font-weight: bold;
+
+    text-align: left;
+
+    text-shadow:
+        1px 1px 1px rgba(0, 0, 80, 0.8);
+
+    cursor: pointer;
+
+    touch-action: manipulation;
+
+    transition:
+        filter 0.12s ease,
+        transform 0.1s ease,
+        opacity 0.2s ease;
+}
+
+.minimized-file-button:hover {
+    filter:
+        brightness(1.12);
+}
+
+.minimized-file-button:active {
+    transform:
+        translateY(1px);
+
+    filter:
+        brightness(0.92);
+}
+
+.minimized-file-button.is-hidden {
+    opacity: 0;
+
+    visibility: hidden;
+
+    pointer-events: none;
+}
+
+.minimized-file-icon {
+    width: 18px;
+    height: 18px;
+
+    margin-right: 6px;
+
+    flex-shrink: 0;
+
+    object-fit: contain;
 }
 
 /* ======================================================
@@ -560,6 +691,21 @@ button {
     pointer-events: none;
 }
 
+.drag-instruction.is-closing {
+    opacity: 0 !important;
+
+    transform:
+        translateX(-50%)
+        translateY(10px)
+        scale(0.88) !important;
+
+    pointer-events: none;
+}
+
+.drag-instruction.is-closed {
+    display: none;
+}
+
 .drag-titlebar {
     min-height: 24px;
 }
@@ -595,6 +741,86 @@ button {
     font-size: 10px;
 }
 
+.mobile-instruction {
+    display: none;
+}
+
+/* ======================================================
+   MOBILE ROTATION BUTTONS
+====================================================== */
+
+.mobile-rotation-controls {
+    position: absolute;
+
+    left: 50%;
+    bottom: 2.2%;
+
+    z-index: 19;
+
+    display: none;
+
+    gap: 7px;
+
+    transform:
+        translateX(-50%);
+}
+
+.xp-control-button {
+    min-width: 88px;
+    min-height: 34px;
+
+    padding:
+        5px 9px;
+
+    border:
+        1px solid #003c74;
+
+    border-radius: 3px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #ffffff 0%,
+            #f4f1e6 48%,
+            #ddd8c8 52%,
+            #f5f2e8 100%
+        );
+
+    box-shadow:
+        inset 1px 1px 1px white,
+        inset -1px -1px 1px #aca899;
+
+    color: #202020;
+
+    font-size: 10px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    touch-action: manipulation;
+
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.xp-control-button:hover {
+    background:
+        linear-gradient(
+            to bottom,
+            #ffffff,
+            #e8f2ff
+        );
+}
+
+.xp-control-button:active,
+.xp-control-button.is-pressed {
+    transform:
+        translateY(1px);
+
+    box-shadow:
+        inset 1px 1px 2px #7f7f7f;
+}
+
 /* ======================================================
    CARRD EMBED LAYOUT
 ====================================================== */
@@ -614,16 +840,6 @@ button {
         left: 2%;
 
         width: min(180px, 32%);
-
-        transform:
-            translateY(10px)
-            scale(0.96);
-    }
-
-    .viewer.is-ready .character-file-window {
-        transform:
-            translateY(0)
-            scale(1);
     }
 
     .character-file-content {
@@ -661,13 +877,27 @@ button {
    MOBILE
 ====================================================== */
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
+
+    html,
+    body {
+        /*
+        The document remains non-scrollable internally,
+        but gestures pass vertically to Carrd.
+        */
+        touch-action: pan-y;
+    }
+
+    .viewer {
+        cursor: default;
+        touch-action: pan-y;
+    }
 
     .model-image {
-        width: 82%;
+        width: 86%;
         height: 100%;
 
-        object-position: 88% center;
+        object-position: center;
     }
 
     .loading-window {
@@ -678,17 +908,7 @@ button {
         top: 2%;
         left: 2%;
 
-        width: min(165px, 38%);
-
-        transform:
-            translateY(8px)
-            scale(0.96);
-    }
-
-    .viewer.is-ready .character-file-window {
-        transform:
-            translateY(0)
-            scale(1);
+        width: min(165px, 40%);
     }
 
     .character-file-content {
@@ -726,9 +946,32 @@ button {
     }
 
     .drag-instruction {
-        width: min(220px, 76%);
+        width: min(215px, 72%);
 
-        bottom: 3%;
+        bottom: 8%;
+    }
+
+    .desktop-instruction {
+        display: none;
+    }
+
+    .mobile-instruction {
+        display: inline;
+    }
+
+    .mobile-rotation-controls {
+        display: flex;
+    }
+
+    .minimized-file-button {
+        left: 2%;
+        bottom: 2.5%;
+
+        min-width: 0;
+        width: auto;
+        max-width: 142px;
+
+        font-size: 9px;
     }
 
     .xp-titlebar-text {
@@ -747,7 +990,7 @@ button {
 @media (max-width: 420px) {
 
     .character-file-window {
-        width: min(150px, 40%);
+        width: min(150px, 42%);
     }
 
     .character-file-content {
@@ -757,6 +1000,23 @@ button {
     .character-field {
         grid-template-columns:
             53px 1fr;
+    }
+
+    .minimized-file-button {
+        max-width: 124px;
+
+        padding-right: 7px;
+    }
+
+    .minimized-file-icon {
+        width: 16px;
+        height: 16px;
+    }
+
+    .xp-control-button {
+        min-width: 78px;
+
+        font-size: 9px;
     }
 }
 
@@ -771,7 +1031,8 @@ button {
     .loading-progress,
     .character-file-window,
     .drag-instruction,
-    .xp-window {
+    .minimized-file-button {
         transition: none;
+        animation: none;
     }
 }
