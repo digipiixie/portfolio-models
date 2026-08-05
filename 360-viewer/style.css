@@ -50,7 +50,7 @@ button {
     background: transparent;
 
     cursor: grab;
-    touch-action: none;
+    touch-action: pan-y;
 }
 
 .viewer.is-dragging {
