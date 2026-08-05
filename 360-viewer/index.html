@@ -26,30 +26,93 @@
             draggable="false"
         >
 
+        <!-- Windows XP-style loading window -->
         <div class="loading-screen" id="loadingScreen">
-            <div class="loading-box">
-                <div class="loading-title">
-                    LOADING CHARACTER
+
+            <div class="xp-window loading-window">
+
+                <div class="xp-titlebar">
+                    <span class="xp-titlebar-icon">✦</span>
+
+                    <span class="xp-titlebar-text">
+                        Character Loader
+                    </span>
+
+                    <button
+                        class="xp-close-button"
+                        type="button"
+                        aria-label="Close"
+                        tabindex="-1"
+                    >
+                        ×
+                    </button>
                 </div>
 
-                <div class="loading-track">
-                    <div
-                        class="loading-progress"
-                        id="loadingProgress"
-                    ></div>
+                <div class="xp-window-content">
+
+                    <div class="loading-message">
+                        Loading character data...
+                    </div>
+
+                    <div class="loading-track">
+                        <div
+                            class="loading-progress"
+                            id="loadingProgress"
+                        ></div>
+                    </div>
+
+                    <div class="loading-bottom-row">
+
+                        <span class="loading-status">
+                            Please wait
+                        </span>
+
+                        <span
+                            class="loading-percentage"
+                            id="loadingPercentage"
+                        >
+                            0%
+                        </span>
+
+                    </div>
+
                 </div>
 
-                <div
-                    class="loading-percentage"
-                    id="loadingPercentage"
-                >
-                    0%
-                </div>
             </div>
+
         </div>
 
-        <div class="drag-instruction" id="dragInstruction">
-            ↔ DRAG TO ROTATE
+        <!-- Windows XP-style drag prompt -->
+        <div
+            class="drag-instruction xp-window"
+            id="dragInstruction"
+        >
+
+            <div class="xp-titlebar drag-titlebar">
+
+                <span class="xp-titlebar-icon">
+                    ↔
+                </span>
+
+                <span class="xp-titlebar-text">
+                    Model Controls
+                </span>
+
+                <button
+                    class="xp-close-button"
+                    type="button"
+                    aria-label="Close"
+                    tabindex="-1"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <div class="drag-window-content">
+                Click and drag to rotate
+            </div>
+
         </div>
 
     </main>
