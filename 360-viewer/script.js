@@ -25,15 +25,19 @@ const SETTINGS = {
     autoplayResumeDelay: 1400,
     instructionDuration: 5000,
 
-    /*
-    Number of frames moved by one mobile button tap.
-    */
     mobileButtonFrameStep: 8,
+    mobileHoldInterval: 70,
 
     /*
-    Speed when a mobile rotate button is held down.
+    Limits how many image downloads happen simultaneously.
+    This is much safer inside a Carrd iframe.
     */
-    mobileHoldInterval: 70
+    preloadConcurrency: 8,
+
+    /*
+    If one image request hangs, stop waiting after this time.
+    */
+    frameLoadTimeout: 15000
 };
 
 
@@ -102,7 +106,9 @@ let lastAnimationTime =
 
 let loadedFrameCount = 0;
 let failedFrameCount = 0;
+let completedFrameCount = 0;
 
+let nextFrameToLoad = 1;
 let mobileHoldTimer = null;
 
 const preloadedImages = [];
@@ -187,19 +193,15 @@ function rotateByFrames(amount) {
 
 /*
 ==========================================================
-LOADING
+LOADING DISPLAY
 ==========================================================
 */
 
 function updateLoadingDisplay() {
-    const completedFrames =
-        loadedFrameCount +
-        failedFrameCount;
-
     const percentage =
         Math.round(
             (
-                completedFrames /
+                completedFrameCount /
                 SETTINGS.totalFrames
             ) * 100
         );
@@ -210,25 +212,34 @@ function updateLoadingDisplay() {
     loadingPercentage.textContent =
         `${percentage}%`;
 
-    if (loadingStatus) {
-        if (percentage < 30) {
-            loadingStatus.textContent =
-                "Reading Character.FBX...";
-        } else if (percentage < 60) {
-            loadingStatus.textContent =
-                "Loading materials...";
-        } else if (percentage < 90) {
-            loadingStatus.textContent =
-                "Preparing viewport...";
-        } else {
-            loadingStatus.textContent =
-                "Almost ready...";
-        }
+    if (!loadingStatus) {
+        return;
+    }
+
+    if (percentage < 25) {
+        loadingStatus.textContent =
+            "Reading Character.FBX...";
+    } else if (percentage < 50) {
+        loadingStatus.textContent =
+            "Loading materials...";
+    } else if (percentage < 75) {
+        loadingStatus.textContent =
+            "Preparing viewport...";
+    } else if (percentage < 100) {
+        loadingStatus.textContent =
+            "Almost ready...";
+    } else {
+        loadingStatus.textContent =
+            "Character ready!";
     }
 }
 
 
 function finishLoading() {
+    if (isReady) {
+        return;
+    }
+
     isReady = true;
 
     viewer.classList.add("is-ready");
@@ -257,50 +268,66 @@ function finishLoading() {
 }
 
 
-function preloadAllFrames() {
-    for (
-        let frameNumber = 1;
-        frameNumber <= SETTINGS.totalFrames;
-        frameNumber++
-    ) {
+/*
+==========================================================
+CONTROLLED FRAME PRELOADING
+==========================================================
+*/
+
+function loadSingleFrame(frameNumber) {
+    return new Promise((resolve) => {
         const preloadImage =
             new Image();
 
+        let requestFinished = false;
+
+        const timeoutId =
+            window.setTimeout(() => {
+                if (requestFinished) {
+                    return;
+                }
+
+                requestFinished = true;
+                failedFrameCount++;
+
+                console.warn(
+                    "Frame timed out:",
+                    getFramePath(frameNumber)
+                );
+
+                resolve();
+            }, SETTINGS.frameLoadTimeout);
+
         preloadImage.onload = () => {
-            loadedFrameCount++;
-            updateLoadingDisplay();
-
-            const completedFrames =
-                loadedFrameCount +
-                failedFrameCount;
-
-            if (
-                completedFrames ===
-                SETTINGS.totalFrames
-            ) {
-                finishLoading();
+            if (requestFinished) {
+                return;
             }
+
+            requestFinished = true;
+
+            window.clearTimeout(timeoutId);
+
+            loadedFrameCount++;
+            resolve();
         };
 
         preloadImage.onerror = () => {
+            if (requestFinished) {
+                return;
+            }
+
+            requestFinished = true;
+
+            window.clearTimeout(timeoutId);
+
             failedFrameCount++;
-            updateLoadingDisplay();
 
             console.error(
                 "Could not load frame:",
                 getFramePath(frameNumber)
             );
 
-            const completedFrames =
-                loadedFrameCount +
-                failedFrameCount;
-
-            if (
-                completedFrames ===
-                SETTINGS.totalFrames
-            ) {
-                finishLoading();
-            }
+            resolve();
         };
 
         preloadImage.src =
@@ -309,7 +336,56 @@ function preloadAllFrames() {
         preloadedImages.push(
             preloadImage
         );
+    });
+}
+
+
+async function preloadWorker() {
+    while (
+        nextFrameToLoad <=
+        SETTINGS.totalFrames
+    ) {
+        const frameNumber =
+            nextFrameToLoad;
+
+        nextFrameToLoad++;
+
+        await loadSingleFrame(
+            frameNumber
+        );
+
+        completedFrameCount++;
+        updateLoadingDisplay();
     }
+}
+
+
+async function preloadAllFrames() {
+    const workers = [];
+
+    const workerCount =
+        Math.min(
+            SETTINGS.preloadConcurrency,
+            SETTINGS.totalFrames
+        );
+
+    for (
+        let worker = 0;
+        worker < workerCount;
+        worker++
+    ) {
+        workers.push(
+            preloadWorker()
+        );
+    }
+
+    await Promise.all(workers);
+
+    /*
+    Even if one or two frames fail, do not leave the
+    visitor trapped behind the loading window.
+    */
+    finishLoading();
 }
 
 
@@ -572,17 +648,13 @@ viewer.addEventListener(
         }
 
         /*
-        Mobile and touch devices use buttons instead.
-        This guarantees vertical Carrd scrolling is free.
+        Mobile uses the buttons instead, allowing the
+        parent Carrd page to scroll vertically.
         */
         if (event.pointerType !== "mouse") {
             return;
         }
 
-        /*
-        Clicking any interface window or control
-        should not rotate the character.
-        */
         if (
             event.target.closest(
                 ".xp-window"
