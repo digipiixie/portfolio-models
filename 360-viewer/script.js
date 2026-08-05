@@ -7,23 +7,22 @@ let dragging = false;
 let previousX = 0;
 
 function updateImage() {
-    const frame = String(currentFrame).padStart(3, "0");
-    image.src = `frames/360-spin-model.${frame}.webp`;
+    const frame = String(currentFrame).padStart(4, "0");
+    image.src = `frames/360-model-spin${frame}.webp`;
 }
 
 image.addEventListener("pointerdown", (event) => {
     dragging = true;
     previousX = event.clientX;
-
     image.setPointerCapture(event.pointerId);
 });
 
 window.addEventListener("pointermove", (event) => {
+
     if (!dragging) return;
 
     const movement = event.clientX - previousX;
 
-    // Change frame every 5 pixels dragged
     if (Math.abs(movement) >= 5) {
 
         if (movement > 0) {
@@ -41,6 +40,7 @@ window.addEventListener("pointermove", (event) => {
         }
 
         updateImage();
+
         previousX = event.clientX;
     }
 });
