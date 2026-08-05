@@ -3,21 +3,56 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>360 Model Viewer</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    >
+
+    <title>Interactive 360 Model Viewer</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <div class="viewer">
+    <main class="viewer" id="viewer">
+
         <img
             id="model"
+            class="model-image"
             src="frames/360-model-spin0001.webp"
+            alt="Interactive 360-degree character model"
             draggable="false"
-            alt="360 Model">
-    </div>
+        >
+
+        <div class="loading-screen" id="loadingScreen">
+            <div class="loading-box">
+                <div class="loading-title">
+                    LOADING CHARACTER
+                </div>
+
+                <div class="loading-track">
+                    <div
+                        class="loading-progress"
+                        id="loadingProgress"
+                    ></div>
+                </div>
+
+                <div
+                    class="loading-percentage"
+                    id="loadingPercentage"
+                >
+                    0%
+                </div>
+            </div>
+        </div>
+
+        <div class="drag-instruction" id="dragInstruction">
+            ↔ DRAG TO ROTATE
+        </div>
+
+    </main>
 
     <script src="script.js"></script>
 
