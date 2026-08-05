@@ -317,6 +317,58 @@ function hideDragInstruction() {
 
 /*
 ==========================================================
+WINDOW CONTROLS
+==========================================================
+*/
+
+function closeWindow(windowElement) {
+
+    if (
+        !windowElement ||
+        windowElement.classList.contains("is-closing") ||
+        windowElement.classList.contains("is-closed")
+    ) {
+        return;
+    }
+
+    windowElement.classList.add("is-closing");
+
+    window.setTimeout(() => {
+
+        windowElement.classList.remove("is-closing");
+        windowElement.classList.add("is-closed");
+
+    }, 180);
+
+}
+
+document
+    .querySelectorAll("[data-close-window]")
+    .forEach((button) => {
+
+        button.addEventListener("pointerdown", (event) => {
+            event.stopPropagation();
+        });
+
+        button.addEventListener("click", (event) => {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const target =
+                document.getElementById(
+                    button.dataset.closeWindow
+                );
+
+            closeWindow(target);
+
+        });
+
+    });
+
+
+/*
+==========================================================
 POINTER INTERACTION
 ==========================================================
 */
