@@ -23,27 +23,33 @@ const SETTINGS = {
     autoplayResumeDelay: 1400,
     instructionDuration: 5000,
 
-    mobileButtonFrameStep: 8,
-    mobileHoldInterval: 70,
+    mobileButtonFrameStep: 5,
+    mobileHoldInterval: 75,
 
     /*
-    The viewer opens once this many frames have loaded.
-    The remaining frames continue loading in the background.
+    The viewer opens after this many frames load.
+    The remaining frames continue loading quietly.
     */
-    minimumFramesBeforeOpening: 24,
+    minimumFramesBeforeOpening: 18,
 
     /*
-    The viewer opens after this many milliseconds even if
-    some image requests are slow.
+    Failsafe: reveal the viewer after this amount of time,
+    even if some image requests are still pending.
     */
     maximumLoadingTime: 8000,
 
     /*
-    Number of simultaneous image requests.
+    Limit simultaneous image downloads to avoid
+    overwhelming a Carrd iframe.
     */
-    preloadConcurrency: 6
-};
+    preloadConcurrency: 6,
 
+    /*
+    Prevent an individual frame request from hanging
+    a preload worker forever.
+    */
+    individualFrameTimeout: 10000
+};
 
 /* ======================================================
    PAGE ELEMENTS
@@ -70,21 +76,38 @@ const loadingStatus =
 const dragInstruction =
     document.getElementById("dragInstruction");
 
+const closeInstructionButton =
+    document.getElementById(
+        "closeInstructionButton"
+    );
+
 const characterFileWindow =
-    document.getElementById("characterFileWindow");
+    document.getElementById(
+        "characterFileWindow"
+    );
 
 const characterFileButton =
-    document.getElementById("characterFileButton");
+    document.getElementById(
+        "characterFileButton"
+    );
+
+const minimizeCharacterButton =
+    document.getElementById(
+        "minimizeCharacterButton"
+    );
 
 const rotateLeftButton =
-    document.getElementById("rotateLeftButton");
+    document.getElementById(
+        "rotateLeftButton"
+    );
 
 const rotateRightButton =
-    document.getElementById("rotateRightButton");
-
+    document.getElementById(
+        "rotateRightButton"
+    );
 
 /* ======================================================
-   VIEWER STATE
+   STATE
 ====================================================== */
 
 let currentFrame = 1;
@@ -109,11 +132,21 @@ let completedFrameCount = 0;
 let failedFrameCount = 0;
 
 let nextFrameToLoad = 1;
+
 let mobileHoldTimer = null;
 
 const preloadedImages = [];
 const loadedFrames = new Set();
 
+/* ======================================================
+   BASIC SAFETY CHECK
+====================================================== */
+
+if (!viewer || !modelImage) {
+    throw new Error(
+        "DIGI PIXIE OS could not find the viewer elements."
+    );
+}
 
 /* ======================================================
    FRAME PATH
@@ -134,7 +167,6 @@ function getFramePath(frameNumber) {
     );
 }
 
-
 /* ======================================================
    FRAME HELPERS
 ====================================================== */
@@ -151,14 +183,16 @@ function wrapFramePosition(position) {
     return position;
 }
 
-
 function showFrame(frameNumber) {
     const wrappedFrame =
         Math.round(
             wrapFramePosition(frameNumber)
         );
 
-    if (wrappedFrame === currentFrame) {
+    if (
+        wrappedFrame === currentFrame &&
+        modelImage.src
+    ) {
         return;
     }
 
@@ -167,7 +201,6 @@ function showFrame(frameNumber) {
     modelImage.src =
         getFramePath(currentFrame);
 }
-
 
 function rotateByFrames(amount) {
     if (!isReady) {
@@ -187,7 +220,6 @@ function rotateByFrames(amount) {
 
     scheduleAutoplayResume();
 }
-
 
 /* ======================================================
    LOADING DISPLAY
@@ -219,13 +251,13 @@ function updateLoadingDisplay() {
         return;
     }
 
-    if (percentage < 25) {
+    if (percentage < 20) {
         loadingStatus.textContent =
             "Reading Character.FBX...";
-    } else if (percentage < 50) {
+    } else if (percentage < 45) {
         loadingStatus.textContent =
             "Loading materials...";
-    } else if (percentage < 75) {
+    } else if (percentage < 70) {
         loadingStatus.textContent =
             "Preparing viewport...";
     } else if (percentage < 100) {
@@ -236,7 +268,6 @@ function updateLoadingDisplay() {
             "Character ready!";
     }
 }
-
 
 function finishLoading() {
     if (isReady) {
@@ -275,23 +306,18 @@ function finishLoading() {
     }, SETTINGS.instructionDuration);
 }
 
-
 function checkIfViewerCanOpen() {
-    if (isReady) {
-        return;
-    }
-
     if (
+        !isReady &&
         loadedFrameCount >=
-        SETTINGS.minimumFramesBeforeOpening
+            SETTINGS.minimumFramesBeforeOpening
     ) {
         finishLoading();
     }
 }
 
-
 /* ======================================================
-   SAFE FRAME PRELOADING
+   SAFE PROGRESSIVE PRELOADING
 ====================================================== */
 
 function loadSingleFrame(frameNumber) {
@@ -299,20 +325,26 @@ function loadSingleFrame(frameNumber) {
         const preloadImage =
             new Image();
 
-        let completed = false;
+        let requestFinished = false;
 
-        const completeRequest =
-            (wasSuccessful) => {
-                if (completed) {
+        const finishRequest =
+            (successful) => {
+
+                if (requestFinished) {
                     return;
                 }
 
-                completed = true;
+                requestFinished = true;
+
+                window.clearTimeout(
+                    timeoutId
+                );
 
                 completedFrameCount++;
 
-                if (wasSuccessful) {
+                if (successful) {
                     loadedFrameCount++;
+
                     loadedFrames.add(
                         frameNumber
                     );
@@ -326,17 +358,30 @@ function loadSingleFrame(frameNumber) {
                 resolve();
             };
 
+        const timeoutId =
+            window.setTimeout(() => {
+
+                console.warn(
+                    "Frame preload timed out:",
+                    getFramePath(frameNumber)
+                );
+
+                finishRequest(false);
+
+            }, SETTINGS.individualFrameTimeout);
+
         preloadImage.onload = () => {
-            completeRequest(true);
+            finishRequest(true);
         };
 
         preloadImage.onerror = () => {
+
             console.warn(
                 "Could not preload frame:",
                 getFramePath(frameNumber)
             );
 
-            completeRequest(false);
+            finishRequest(false);
         };
 
         preloadImage.src =
@@ -347,7 +392,6 @@ function loadSingleFrame(frameNumber) {
         );
     });
 }
-
 
 async function preloadWorker() {
     while (
@@ -365,14 +409,18 @@ async function preloadWorker() {
     }
 }
 
-
 async function preloadAllFrames() {
     const workers = [];
 
+    const workerCount =
+        Math.min(
+            SETTINGS.preloadConcurrency,
+            SETTINGS.totalFrames
+        );
+
     for (
         let worker = 0;
-        worker <
-        SETTINGS.preloadConcurrency;
+        worker < workerCount;
         worker++
     ) {
         workers.push(
@@ -382,22 +430,17 @@ async function preloadAllFrames() {
 
     await Promise.all(workers);
 
-    /*
-    Finish even if a few frames failed.
-    */
     finishLoading();
 }
 
-
 /*
-Failsafe: never leave the visitor trapped behind
-the loading window.
+Global failsafe: the loading window can never remain
+onscreen forever.
 */
 
 window.setTimeout(() => {
     finishLoading();
 }, SETTINGS.maximumLoadingTime);
-
 
 /* ======================================================
    AUTOPLAY
@@ -411,7 +454,6 @@ function pauseAutoplay() {
     );
 }
 
-
 function scheduleAutoplayResume() {
     window.clearTimeout(
         autoplayResumeTimer
@@ -419,18 +461,19 @@ function scheduleAutoplayResume() {
 
     autoplayResumeTimer =
         window.setTimeout(() => {
+
             if (
                 SETTINGS.autoplay &&
                 !isDragging
             ) {
                 autoplayEnabled = true;
             }
+
         }, SETTINGS.autoplayResumeDelay);
 }
 
-
 /* ======================================================
-   DRAG INSTRUCTION
+   INSTRUCTION WINDOW
 ====================================================== */
 
 function hideDragInstruction() {
@@ -441,74 +484,55 @@ function hideDragInstruction() {
     }
 }
 
-
-/* ======================================================
-   GENERAL CLOSE BUTTON
-====================================================== */
-
-function closeWindow(windowElement) {
+function closeInstructionWindow() {
     if (
-        !windowElement ||
-        windowElement.classList.contains(
-            "is-closing"
-        ) ||
-        windowElement.classList.contains(
+        !dragInstruction ||
+        dragInstruction.classList.contains(
             "is-closed"
         )
     ) {
         return;
     }
 
-    windowElement.classList.add(
+    dragInstruction.classList.add(
         "is-closing"
     );
 
     window.setTimeout(() => {
-        windowElement.classList.remove(
+
+        dragInstruction.classList.remove(
             "is-closing"
         );
 
-        windowElement.classList.add(
+        dragInstruction.classList.add(
             "is-closed"
         );
-    }, 200);
+
+    }, 220);
 }
 
+if (closeInstructionButton) {
 
-document
-    .querySelectorAll("[data-close-window]")
-    .forEach((button) => {
-        button.addEventListener(
-            "pointerdown",
-            (event) => {
-                event.stopPropagation();
-            }
-        );
+    closeInstructionButton.addEventListener(
+        "pointerdown",
+        (event) => {
+            event.stopPropagation();
+        }
+    );
 
-        button.addEventListener(
-            "click",
-            (event) => {
-                event.preventDefault();
-                event.stopPropagation();
+    closeInstructionButton.addEventListener(
+        "click",
+        (event) => {
+            event.preventDefault();
+            event.stopPropagation();
 
-                const targetId =
-                    button.getAttribute(
-                        "data-close-window"
-                    );
-
-                const targetWindow =
-                    document.getElementById(
-                        targetId
-                    );
-
-                closeWindow(targetWindow);
-            }
-        );
-    });
-
+            closeInstructionWindow();
+        }
+    );
+}
 
 /* ======================================================
-   CHARACTER FILE MINIMIZE / RESTORE
+   CHARACTER WINDOW MINIMIZE / RESTORE
 ====================================================== */
 
 function minimizeCharacterFile() {
@@ -538,6 +562,7 @@ function minimizeCharacterFile() {
     }
 
     window.setTimeout(() => {
+
         characterFileWindow.classList.remove(
             "is-minimizing"
         );
@@ -551,9 +576,9 @@ function minimizeCharacterFile() {
                 "is-hidden"
             );
         }
+
     }, 220);
 }
-
 
 function restoreCharacterFile() {
     if (
@@ -568,6 +593,11 @@ function restoreCharacterFile() {
     if (characterFileButton) {
         characterFileButton.classList.add(
             "is-hidden"
+        );
+
+        characterFileButton.setAttribute(
+            "aria-expanded",
+            "true"
         );
     }
 
@@ -584,44 +614,44 @@ function restoreCharacterFile() {
         "false"
     );
 
-    if (characterFileButton) {
-        characterFileButton.setAttribute(
-            "aria-expanded",
-            "true"
-        );
-    }
-
     window.setTimeout(() => {
+
         characterFileWindow.classList.remove(
             "is-restoring"
         );
-    }, 260);
+
+    }, 280);
 }
 
+if (minimizeCharacterButton) {
 
-document
-    .querySelectorAll("[data-minimize-window]")
-    .forEach((button) => {
-        button.addEventListener(
-            "pointerdown",
-            (event) => {
-                event.stopPropagation();
-            }
-        );
+    minimizeCharacterButton.addEventListener(
+        "pointerdown",
+        (event) => {
+            event.stopPropagation();
+        }
+    );
 
-        button.addEventListener(
-            "click",
-            (event) => {
-                event.preventDefault();
-                event.stopPropagation();
+    minimizeCharacterButton.addEventListener(
+        "click",
+        (event) => {
+            event.preventDefault();
+            event.stopPropagation();
 
-                minimizeCharacterFile();
-            }
-        );
-    });
-
+            minimizeCharacterFile();
+        }
+    );
+}
 
 if (characterFileButton) {
+
+    characterFileButton.addEventListener(
+        "pointerdown",
+        (event) => {
+            event.stopPropagation();
+        }
+    );
+
     characterFileButton.addEventListener(
         "click",
         (event) => {
@@ -633,7 +663,6 @@ if (characterFileButton) {
     );
 }
 
-
 /* ======================================================
    DESKTOP MOUSE ROTATION
 ====================================================== */
@@ -641,6 +670,7 @@ if (characterFileButton) {
 viewer.addEventListener(
     "pointerdown",
     (event) => {
+
         if (
             !isReady ||
             event.pointerType !== "mouse"
@@ -682,10 +712,10 @@ viewer.addEventListener(
     }
 );
 
-
 viewer.addEventListener(
     "pointermove",
     (event) => {
+
         if (
             event.pointerType !== "mouse" ||
             !isDragging ||
@@ -735,7 +765,6 @@ viewer.addEventListener(
     }
 );
 
-
 function stopDragging(event) {
     if (!isDragging) {
         return;
@@ -763,7 +792,6 @@ function stopDragging(event) {
     scheduleAutoplayResume();
 }
 
-
 viewer.addEventListener(
     "pointerup",
     stopDragging
@@ -786,13 +814,13 @@ viewer.addEventListener(
     }
 );
 
-
 /* ======================================================
    MOBILE ROTATION BUTTONS
 ====================================================== */
 
 function stopMobileHold() {
     if (mobileHoldTimer !== null) {
+
         window.clearInterval(
             mobileHoldTimer
         );
@@ -813,11 +841,14 @@ function stopMobileHold() {
     }
 }
 
-
 function startMobileHold(
     button,
     frameAmount
 ) {
+    if (!isReady) {
+        return;
+    }
+
     stopMobileHold();
 
     button.classList.add(
@@ -828,12 +859,16 @@ function startMobileHold(
 
     mobileHoldTimer =
         window.setInterval(() => {
-            rotateByFrames(frameAmount);
+
+            rotateByFrames(
+                frameAmount
+            );
+
         }, SETTINGS.mobileHoldInterval);
 }
 
-
 if (rotateLeftButton) {
+
     rotateLeftButton.addEventListener(
         "pointerdown",
         (event) => {
@@ -848,8 +883,8 @@ if (rotateLeftButton) {
     );
 }
 
-
 if (rotateRightButton) {
+
     rotateRightButton.addEventListener(
         "pointerdown",
         (event) => {
@@ -864,13 +899,13 @@ if (rotateRightButton) {
     );
 }
 
-
 [
     rotateLeftButton,
     rotateRightButton
 ]
     .filter(Boolean)
     .forEach((button) => {
+
         button.addEventListener(
             "pointerup",
             stopMobileHold
@@ -887,20 +922,19 @@ if (rotateRightButton) {
         );
     });
 
-
 window.addEventListener(
     "pointerup",
     stopMobileHold
 );
 
-
 /* ======================================================
-   KEYBOARD SUPPORT
+   KEYBOARD ROTATION
 ====================================================== */
 
 window.addEventListener(
     "keydown",
     (event) => {
+
         if (!isReady) {
             return;
         }
@@ -915,9 +949,8 @@ window.addEventListener(
     }
 );
 
-
 /* ======================================================
-   MAIN ANIMATION LOOP
+   ANIMATION LOOP
 ====================================================== */
 
 function animationLoop(timestamp) {
@@ -930,7 +963,11 @@ function animationLoop(timestamp) {
 
     lastAnimationTime = timestamp;
 
-    if (isReady && !isDragging) {
+    if (
+        isReady &&
+        !isDragging
+    ) {
+
         if (
             Math.abs(inertiaVelocity) >
             0.0005
@@ -954,10 +991,12 @@ function animationLoop(timestamp) {
             inertiaVelocity *= friction;
 
             showFrame(framePosition);
+
         } else {
             inertiaVelocity = 0;
 
             if (autoplayEnabled) {
+
                 const framesPerMillisecond =
                     SETTINGS.autoplayFPS /
                     1000;
@@ -981,9 +1020,8 @@ function animationLoop(timestamp) {
     );
 }
 
-
 /* ======================================================
-   START VIEWER
+   START DIGI PIXIE OS
 ====================================================== */
 
 updateLoadingDisplay();
