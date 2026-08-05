@@ -48,9 +48,9 @@
                     </span>
 
                     <button
-                        class="xp-close-button"
+                        class="xp-close-button decorative-close"
                         type="button"
-                        aria-label="Close"
+                        aria-label="Loading window"
                         tabindex="-1"
                     >
                         ×
@@ -95,7 +95,10 @@
         </div>
 
         <!-- Character information window -->
-        <section class="xp-window character-file-window">
+        <section
+            class="xp-window character-file-window"
+            id="characterFileWindow"
+        >
 
             <div class="xp-titlebar">
 
@@ -110,10 +113,10 @@
                 </span>
 
                 <button
-                    class="xp-close-button"
+                    class="xp-close-button functional-close"
                     type="button"
-                    aria-label="Close"
-                    tabindex="-1"
+                    aria-label="Close Character.FBX window"
+                    data-close-window="characterFileWindow"
                 >
                     ×
                 </button>
@@ -222,10 +225,10 @@
                 </span>
 
                 <button
-                    class="xp-close-button"
+                    class="xp-close-button functional-close"
                     type="button"
-                    aria-label="Close"
-                    tabindex="-1"
+                    aria-label="Close rotation instructions"
+                    data-close-window="dragInstruction"
                 >
                     ×
                 </button>
@@ -234,7 +237,9 @@
 
             <div class="drag-window-content">
 
-                <strong>Inspect Character</strong>
+                <strong>
+                    Inspect Character
+                </strong>
 
                 <span>
                     Click and drag to rotate
