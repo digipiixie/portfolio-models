@@ -1054,3 +1054,78 @@ button {
         left: 2%;
     }
 }
+
+/* ======================================================
+   DEVICE-SPECIFIC FIXES
+   Uses touch capability instead of iframe width
+====================================================== */
+
+/* Never show mobile rotation controls on mouse/laptop devices */
+@media (hover: hover) and (pointer: fine) {
+
+    .mobile-rotation-controls {
+        display: none !important;
+    }
+
+    .desktop-instruction {
+        display: inline !important;
+    }
+
+    .mobile-instruction {
+        display: none !important;
+    }
+}
+
+
+/* Only show mobile controls on actual touch devices */
+@media (hover: none) and (pointer: coarse) {
+
+    .viewer {
+        cursor: default;
+        touch-action: pan-y;
+    }
+
+    .mobile-rotation-controls {
+        display: flex !important;
+    }
+
+    .desktop-instruction {
+        display: none !important;
+    }
+
+    .mobile-instruction {
+        display: inline !important;
+    }
+
+    /* Keep minimized Character.FBX button at the top-left */
+    .minimized-file-button {
+        top: 2% !important;
+        left: 2% !important;
+
+        bottom: auto !important;
+    }
+}
+
+
+/* Consistent retro arrows instead of emoji rendering */
+.rotate-arrow {
+    display: inline-block;
+
+    margin:
+        0 3px;
+
+    font-family:
+        Tahoma,
+        Verdana,
+        Arial,
+        sans-serif;
+
+    font-size: 17px;
+    font-weight: bold;
+    line-height: 0.8;
+
+    color: #153d7a;
+
+    transform:
+        translateY(1px);
+}
