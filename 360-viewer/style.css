@@ -1036,3 +1036,21 @@ button {
         animation: none;
     }
 }
+
+/* ======================================================
+   MINIMIZED FILE BUTTON — TOP POSITION
+====================================================== */
+
+.minimized-file-button {
+    top: 2%;
+    bottom: auto;
+}
+
+/* Keep it neatly positioned on mobile */
+@media (max-width: 700px) {
+    .minimized-file-button {
+        top: 2%;
+        bottom: auto;
+        left: 2%;
+    }
+}
