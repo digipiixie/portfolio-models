@@ -1,10 +1,8 @@
 "use strict";
 
-/*
-==========================================================
-MODEL SETTINGS
-==========================================================
-*/
+/* ======================================================
+   SETTINGS
+====================================================== */
 
 const SETTINGS = {
     frameFolder: "frames",
@@ -29,23 +27,27 @@ const SETTINGS = {
     mobileHoldInterval: 70,
 
     /*
-    Limits how many image downloads happen simultaneously.
-    This is much safer inside a Carrd iframe.
+    The viewer opens once this many frames have loaded.
+    The remaining frames continue loading in the background.
     */
-    preloadConcurrency: 8,
+    minimumFramesBeforeOpening: 24,
 
     /*
-    If one image request hangs, stop waiting after this time.
+    The viewer opens after this many milliseconds even if
+    some image requests are slow.
     */
-    frameLoadTimeout: 15000
+    maximumLoadingTime: 8000,
+
+    /*
+    Number of simultaneous image requests.
+    */
+    preloadConcurrency: 6
 };
 
 
-/*
-==========================================================
-PAGE ELEMENTS
-==========================================================
-*/
+/* ======================================================
+   PAGE ELEMENTS
+====================================================== */
 
 const viewer =
     document.getElementById("viewer");
@@ -81,17 +83,15 @@ const rotateRightButton =
     document.getElementById("rotateRightButton");
 
 
-/*
-==========================================================
-VIEWER STATE
-==========================================================
-*/
+/* ======================================================
+   VIEWER STATE
+====================================================== */
 
 let currentFrame = 1;
 let framePosition = 1;
 
-let isDragging = false;
 let isReady = false;
+let isDragging = false;
 
 let previousPointerX = 0;
 let previousPointerTime = 0;
@@ -105,20 +105,19 @@ let lastAnimationTime =
     performance.now();
 
 let loadedFrameCount = 0;
-let failedFrameCount = 0;
 let completedFrameCount = 0;
+let failedFrameCount = 0;
 
 let nextFrameToLoad = 1;
 let mobileHoldTimer = null;
 
 const preloadedImages = [];
+const loadedFrames = new Set();
 
 
-/*
-==========================================================
-FRAME PATH
-==========================================================
-*/
+/* ======================================================
+   FRAME PATH
+====================================================== */
 
 function getFramePath(frameNumber) {
     const paddedNumber =
@@ -136,22 +135,17 @@ function getFramePath(frameNumber) {
 }
 
 
-/*
-==========================================================
-FRAME HELPERS
-==========================================================
-*/
+/* ======================================================
+   FRAME HELPERS
+====================================================== */
 
 function wrapFramePosition(position) {
-    const frameCount =
-        SETTINGS.totalFrames;
-
     while (position < 1) {
-        position += frameCount;
+        position += SETTINGS.totalFrames;
     }
 
-    while (position > frameCount) {
-        position -= frameCount;
+    while (position > SETTINGS.totalFrames) {
+        position -= SETTINGS.totalFrames;
     }
 
     return position;
@@ -176,6 +170,10 @@ function showFrame(frameNumber) {
 
 
 function rotateByFrames(amount) {
+    if (!isReady) {
+        return;
+    }
+
     pauseAutoplay();
 
     inertiaVelocity = 0;
@@ -191,26 +189,31 @@ function rotateByFrames(amount) {
 }
 
 
-/*
-==========================================================
-LOADING DISPLAY
-==========================================================
-*/
+/* ======================================================
+   LOADING DISPLAY
+====================================================== */
 
 function updateLoadingDisplay() {
     const percentage =
-        Math.round(
-            (
-                completedFrameCount /
-                SETTINGS.totalFrames
-            ) * 100
+        Math.min(
+            100,
+            Math.round(
+                (
+                    completedFrameCount /
+                    SETTINGS.totalFrames
+                ) * 100
+            )
         );
 
-    loadingProgress.style.width =
-        `${percentage}%`;
+    if (loadingProgress) {
+        loadingProgress.style.width =
+            `${percentage}%`;
+    }
 
-    loadingPercentage.textContent =
-        `${percentage}%`;
+    if (loadingPercentage) {
+        loadingPercentage.textContent =
+            `${percentage}%`;
+    }
 
     if (!loadingStatus) {
         return;
@@ -227,7 +230,7 @@ function updateLoadingDisplay() {
             "Preparing viewport...";
     } else if (percentage < 100) {
         loadingStatus.textContent =
-            "Almost ready...";
+            "Loading remaining frames...";
     } else {
         loadingStatus.textContent =
             "Character ready!";
@@ -243,7 +246,12 @@ function finishLoading() {
     isReady = true;
 
     viewer.classList.add("is-ready");
-    loadingScreen.classList.add("is-hidden");
+
+    if (loadingScreen) {
+        loadingScreen.classList.add(
+            "is-hidden"
+        );
+    }
 
     framePosition = 1;
     currentFrame = 0;
@@ -268,66 +276,67 @@ function finishLoading() {
 }
 
 
-/*
-==========================================================
-CONTROLLED FRAME PRELOADING
-==========================================================
-*/
+function checkIfViewerCanOpen() {
+    if (isReady) {
+        return;
+    }
+
+    if (
+        loadedFrameCount >=
+        SETTINGS.minimumFramesBeforeOpening
+    ) {
+        finishLoading();
+    }
+}
+
+
+/* ======================================================
+   SAFE FRAME PRELOADING
+====================================================== */
 
 function loadSingleFrame(frameNumber) {
     return new Promise((resolve) => {
         const preloadImage =
             new Image();
 
-        let requestFinished = false;
+        let completed = false;
 
-        const timeoutId =
-            window.setTimeout(() => {
-                if (requestFinished) {
+        const completeRequest =
+            (wasSuccessful) => {
+                if (completed) {
                     return;
                 }
 
-                requestFinished = true;
-                failedFrameCount++;
+                completed = true;
 
-                console.warn(
-                    "Frame timed out:",
-                    getFramePath(frameNumber)
-                );
+                completedFrameCount++;
+
+                if (wasSuccessful) {
+                    loadedFrameCount++;
+                    loadedFrames.add(
+                        frameNumber
+                    );
+                } else {
+                    failedFrameCount++;
+                }
+
+                updateLoadingDisplay();
+                checkIfViewerCanOpen();
 
                 resolve();
-            }, SETTINGS.frameLoadTimeout);
+            };
 
         preloadImage.onload = () => {
-            if (requestFinished) {
-                return;
-            }
-
-            requestFinished = true;
-
-            window.clearTimeout(timeoutId);
-
-            loadedFrameCount++;
-            resolve();
+            completeRequest(true);
         };
 
         preloadImage.onerror = () => {
-            if (requestFinished) {
-                return;
-            }
-
-            requestFinished = true;
-
-            window.clearTimeout(timeoutId);
-
-            failedFrameCount++;
-
-            console.error(
-                "Could not load frame:",
+            console.warn(
+                "Could not preload frame:",
                 getFramePath(frameNumber)
             );
 
-            resolve();
+            completeRequest(false);
         };
 
         preloadImage.src =
@@ -353,9 +362,6 @@ async function preloadWorker() {
         await loadSingleFrame(
             frameNumber
         );
-
-        completedFrameCount++;
-        updateLoadingDisplay();
     }
 }
 
@@ -363,15 +369,10 @@ async function preloadWorker() {
 async function preloadAllFrames() {
     const workers = [];
 
-    const workerCount =
-        Math.min(
-            SETTINGS.preloadConcurrency,
-            SETTINGS.totalFrames
-        );
-
     for (
         let worker = 0;
-        worker < workerCount;
+        worker <
+        SETTINGS.preloadConcurrency;
         worker++
     ) {
         workers.push(
@@ -382,18 +383,25 @@ async function preloadAllFrames() {
     await Promise.all(workers);
 
     /*
-    Even if one or two frames fail, do not leave the
-    visitor trapped behind the loading window.
+    Finish even if a few frames failed.
     */
     finishLoading();
 }
 
 
 /*
-==========================================================
-AUTOPLAY
-==========================================================
+Failsafe: never leave the visitor trapped behind
+the loading window.
 */
+
+window.setTimeout(() => {
+    finishLoading();
+}, SETTINGS.maximumLoadingTime);
+
+
+/* ======================================================
+   AUTOPLAY
+====================================================== */
 
 function pauseAutoplay() {
     autoplayEnabled = false;
@@ -421,11 +429,9 @@ function scheduleAutoplayResume() {
 }
 
 
-/*
-==========================================================
-DRAG INSTRUCTION
-==========================================================
-*/
+/* ======================================================
+   DRAG INSTRUCTION
+====================================================== */
 
 function hideDragInstruction() {
     if (dragInstruction) {
@@ -436,11 +442,9 @@ function hideDragInstruction() {
 }
 
 
-/*
-==========================================================
-GENERAL CLOSE BUTTON
-==========================================================
-*/
+/* ======================================================
+   GENERAL CLOSE BUTTON
+====================================================== */
 
 function closeWindow(windowElement) {
     if (
@@ -474,7 +478,6 @@ function closeWindow(windowElement) {
 document
     .querySelectorAll("[data-close-window]")
     .forEach((button) => {
-
         button.addEventListener(
             "pointerdown",
             (event) => {
@@ -504,11 +507,9 @@ document
     });
 
 
-/*
-==========================================================
-CHARACTER FILE MINIMIZE / RESTORE
-==========================================================
-*/
+/* ======================================================
+   CHARACTER FILE MINIMIZE / RESTORE
+====================================================== */
 
 function minimizeCharacterFile() {
     if (
@@ -529,10 +530,12 @@ function minimizeCharacterFile() {
         "true"
     );
 
-    characterFileButton.setAttribute(
-        "aria-expanded",
-        "false"
-    );
+    if (characterFileButton) {
+        characterFileButton.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+    }
 
     window.setTimeout(() => {
         characterFileWindow.classList.remove(
@@ -543,9 +546,11 @@ function minimizeCharacterFile() {
             "is-minimized"
         );
 
-        characterFileButton.classList.remove(
-            "is-hidden"
-        );
+        if (characterFileButton) {
+            characterFileButton.classList.remove(
+                "is-hidden"
+            );
+        }
     }, 220);
 }
 
@@ -560,9 +565,11 @@ function restoreCharacterFile() {
         return;
     }
 
-    characterFileButton.classList.add(
-        "is-hidden"
-    );
+    if (characterFileButton) {
+        characterFileButton.classList.add(
+            "is-hidden"
+        );
+    }
 
     characterFileWindow.classList.remove(
         "is-minimized"
@@ -577,10 +584,12 @@ function restoreCharacterFile() {
         "false"
     );
 
-    characterFileButton.setAttribute(
-        "aria-expanded",
-        "true"
-    );
+    if (characterFileButton) {
+        characterFileButton.setAttribute(
+            "aria-expanded",
+            "true"
+        );
+    }
 
     window.setTimeout(() => {
         characterFileWindow.classList.remove(
@@ -593,7 +602,6 @@ function restoreCharacterFile() {
 document
     .querySelectorAll("[data-minimize-window]")
     .forEach((button) => {
-
         button.addEventListener(
             "pointerdown",
             (event) => {
@@ -607,51 +615,36 @@ document
                 event.preventDefault();
                 event.stopPropagation();
 
-                const targetId =
-                    button.getAttribute(
-                        "data-minimize-window"
-                    );
-
-                if (
-                    targetId ===
-                    "characterFileWindow"
-                ) {
-                    minimizeCharacterFile();
-                }
+                minimizeCharacterFile();
             }
         );
     });
 
 
-characterFileButton.addEventListener(
-    "click",
-    (event) => {
-        event.preventDefault();
-        event.stopPropagation();
+if (characterFileButton) {
+    characterFileButton.addEventListener(
+        "click",
+        (event) => {
+            event.preventDefault();
+            event.stopPropagation();
 
-        restoreCharacterFile();
-    }
-);
+            restoreCharacterFile();
+        }
+    );
+}
 
 
-/*
-==========================================================
-DESKTOP MOUSE ROTATION
-==========================================================
-*/
+/* ======================================================
+   DESKTOP MOUSE ROTATION
+====================================================== */
 
 viewer.addEventListener(
     "pointerdown",
     (event) => {
-        if (!isReady) {
-            return;
-        }
-
-        /*
-        Mobile uses the buttons instead, allowing the
-        parent Carrd page to scroll vertically.
-        */
-        if (event.pointerType !== "mouse") {
+        if (
+            !isReady ||
+            event.pointerType !== "mouse"
+        ) {
             return;
         }
 
@@ -794,11 +787,9 @@ viewer.addEventListener(
 );
 
 
-/*
-==========================================================
-MOBILE ROTATION BUTTONS
-==========================================================
-*/
+/* ======================================================
+   MOBILE ROTATION BUTTONS
+====================================================== */
 
 function stopMobileHold() {
     if (mobileHoldTimer !== null) {
@@ -809,13 +800,17 @@ function stopMobileHold() {
         mobileHoldTimer = null;
     }
 
-    rotateLeftButton.classList.remove(
-        "is-pressed"
-    );
+    if (rotateLeftButton) {
+        rotateLeftButton.classList.remove(
+            "is-pressed"
+        );
+    }
 
-    rotateRightButton.classList.remove(
-        "is-pressed"
-    );
+    if (rotateRightButton) {
+        rotateRightButton.classList.remove(
+            "is-pressed"
+        );
+    }
 }
 
 
@@ -838,54 +833,59 @@ function startMobileHold(
 }
 
 
-rotateLeftButton.addEventListener(
-    "pointerdown",
-    (event) => {
-        event.preventDefault();
-        event.stopPropagation();
+if (rotateLeftButton) {
+    rotateLeftButton.addEventListener(
+        "pointerdown",
+        (event) => {
+            event.preventDefault();
+            event.stopPropagation();
 
-        startMobileHold(
-            rotateLeftButton,
-            -SETTINGS.mobileButtonFrameStep
-        );
-    }
-);
+            startMobileHold(
+                rotateLeftButton,
+                -SETTINGS.mobileButtonFrameStep
+            );
+        }
+    );
+}
 
 
-rotateRightButton.addEventListener(
-    "pointerdown",
-    (event) => {
-        event.preventDefault();
-        event.stopPropagation();
+if (rotateRightButton) {
+    rotateRightButton.addEventListener(
+        "pointerdown",
+        (event) => {
+            event.preventDefault();
+            event.stopPropagation();
 
-        startMobileHold(
-            rotateRightButton,
-            SETTINGS.mobileButtonFrameStep
-        );
-    }
-);
+            startMobileHold(
+                rotateRightButton,
+                SETTINGS.mobileButtonFrameStep
+            );
+        }
+    );
+}
 
 
 [
     rotateLeftButton,
     rotateRightButton
-].forEach((button) => {
+]
+    .filter(Boolean)
+    .forEach((button) => {
+        button.addEventListener(
+            "pointerup",
+            stopMobileHold
+        );
 
-    button.addEventListener(
-        "pointerup",
-        stopMobileHold
-    );
+        button.addEventListener(
+            "pointercancel",
+            stopMobileHold
+        );
 
-    button.addEventListener(
-        "pointercancel",
-        stopMobileHold
-    );
-
-    button.addEventListener(
-        "lostpointercapture",
-        stopMobileHold
-    );
-});
+        button.addEventListener(
+            "lostpointercapture",
+            stopMobileHold
+        );
+    });
 
 
 window.addEventListener(
@@ -894,11 +894,9 @@ window.addEventListener(
 );
 
 
-/*
-==========================================================
-KEYBOARD SUPPORT
-==========================================================
-*/
+/* ======================================================
+   KEYBOARD SUPPORT
+====================================================== */
 
 window.addEventListener(
     "keydown",
@@ -918,11 +916,9 @@ window.addEventListener(
 );
 
 
-/*
-==========================================================
-MAIN ANIMATION LOOP
-==========================================================
-*/
+/* ======================================================
+   MAIN ANIMATION LOOP
+====================================================== */
 
 function animationLoop(timestamp) {
     const elapsedMilliseconds =
@@ -935,7 +931,6 @@ function animationLoop(timestamp) {
     lastAnimationTime = timestamp;
 
     if (isReady && !isDragging) {
-
         if (
             Math.abs(inertiaVelocity) >
             0.0005
@@ -987,11 +982,9 @@ function animationLoop(timestamp) {
 }
 
 
-/*
-==========================================================
-START VIEWER
-==========================================================
-*/
+/* ======================================================
+   START VIEWER
+====================================================== */
 
 updateLoadingDisplay();
 preloadAllFrames();
