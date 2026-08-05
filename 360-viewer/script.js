@@ -324,7 +324,13 @@ POINTER INTERACTION
 viewer.addEventListener(
     "pointerdown",
     (event) => {
+
         if (!isReady) {
+            return;
+        }
+
+        /* Don't start rotating when clicking a window */
+        if (event.target.closest(".xp-window")) {
             return;
         }
 
