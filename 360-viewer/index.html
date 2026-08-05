@@ -75,7 +75,10 @@
 
                     <div class="loading-bottom-row">
 
-                        <span class="loading-status">
+                        <span
+                            class="loading-status"
+                            id="loadingStatus"
+                        >
                             Initializing preview...
                         </span>
 
@@ -95,9 +98,11 @@
         </div>
 
         <!-- Character information window -->
+        <!-- Starts minimized -->
         <section
-            class="xp-window character-file-window"
+            class="xp-window character-file-window is-minimized"
             id="characterFileWindow"
+            aria-hidden="true"
         >
 
             <div class="xp-titlebar">
@@ -115,8 +120,8 @@
                 <button
                     class="xp-close-button functional-close"
                     type="button"
-                    aria-label="Close Character.FBX window"
-                    data-close-window="characterFileWindow"
+                    aria-label="Minimize Character.FBX window"
+                    data-minimize-window="characterFileWindow"
                 >
                     ×
                 </button>
@@ -206,6 +211,27 @@
 
         </section>
 
+        <!-- Minimized Character.FBX taskbar button -->
+        <button
+            class="minimized-file-button"
+            id="characterFileButton"
+            type="button"
+            aria-controls="characterFileWindow"
+            aria-expanded="false"
+        >
+
+            <img
+                class="minimized-file-icon"
+                src="icons/Plant.png"
+                alt=""
+            >
+
+            <span>
+                Character.FBX
+            </span>
+
+        </button>
+
         <!-- Drag instruction window -->
         <div
             class="drag-instruction xp-window"
@@ -241,11 +267,42 @@
                     Inspect Character
                 </strong>
 
-                <span>
+                <span class="desktop-instruction">
                     Click and drag to rotate
                 </span>
 
+                <span class="mobile-instruction">
+                    Use the rotate buttons below
+                </span>
+
             </div>
+
+        </div>
+
+        <!-- Mobile rotation controls -->
+        <div
+            class="mobile-rotation-controls"
+            id="mobileRotationControls"
+            aria-label="Character rotation controls"
+        >
+
+            <button
+                class="xp-control-button"
+                id="rotateLeftButton"
+                type="button"
+                aria-label="Rotate character left"
+            >
+                ◀ Rotate
+            </button>
+
+            <button
+                class="xp-control-button"
+                id="rotateRightButton"
+                type="button"
+                aria-label="Rotate character right"
+            >
+                Rotate ▶
+            </button>
 
         </div>
 
