@@ -13,6 +13,12 @@ body {
     overflow: hidden;
 
     background: transparent;
+
+    /*
+    Vertical finger gestures should remain available
+    for scrolling the parent Carrd page.
+    */
+    touch-action: pan-y;
 }
 
 body {
@@ -51,10 +57,6 @@ button {
 
     cursor: grab;
 
-    /*
-    Vertical touch gestures are reserved for scrolling
-    the Carrd page.
-    */
     touch-action: pan-y;
 }
 
@@ -93,7 +95,7 @@ button {
 }
 
 /* ======================================================
-   WINDOWS XP-STYLE WINDOW
+   XP WINDOW
 ====================================================== */
 
 .xp-window {
@@ -165,7 +167,7 @@ button {
 }
 
 /* ======================================================
-   CLOSE BUTTONS
+   XP CLOSE BUTTON
 ====================================================== */
 
 .xp-close-button {
@@ -215,6 +217,7 @@ button {
 .functional-close {
     cursor: pointer;
     pointer-events: auto;
+
     touch-action: manipulation;
 }
 
@@ -259,7 +262,7 @@ button {
     position: absolute;
     inset: 0;
 
-    z-index: 30;
+    z-index: 40;
 
     display: flex;
     justify-content: center;
@@ -355,83 +358,69 @@ button {
 }
 
 /* ======================================================
-   CHARACTER FILE WINDOW
+   CHARACTER PROFILE WINDOW
 ====================================================== */
 
 .character-file-window {
     position: absolute;
 
-    top: 4%;
-    left: 4%;
+    top: 3%;
+    left: 2%;
 
-    z-index: 18;
+    z-index: 25;
 
-    width: min(225px, 31%);
+    width: min(215px, 31%);
 
-    opacity: 0;
-
-    transform:
-        translateY(12px)
-        scale(0.96);
+    opacity: 1;
 
     pointer-events: auto;
 
     transition:
-        opacity 0.24s ease,
-        transform 0.24s ease,
-        visibility 0.24s ease;
+        opacity 0.22s ease,
+        transform 0.22s ease,
+        visibility 0.22s ease;
 }
 
-.viewer.is-ready
-.character-file-window:not(.is-minimized) {
-    opacity: 1;
+.character-file-window.is-minimized {
+    opacity: 0;
+    visibility: hidden;
 
     transform:
-        translateY(0)
-        scale(1);
+        translateY(-12px)
+        scale(0.84);
+
+    pointer-events: none;
 }
 
 .character-file-window.is-minimizing {
     opacity: 0;
 
     transform:
-        translateY(14px)
-        scale(0.84);
-
-    pointer-events: none;
-}
-
-.character-file-window.is-minimized {
-    opacity: 0;
-
-    visibility: hidden;
-
-    transform:
-        translateY(16px)
-        scale(0.8);
+        translateY(-10px)
+        scale(0.86);
 
     pointer-events: none;
 }
 
 .character-file-window.is-restoring {
     animation:
-        restore-window 0.25s ease both;
+        restore-profile-window 0.28s ease both;
 }
 
-@keyframes restore-window {
+@keyframes restore-profile-window {
     0% {
         opacity: 0;
 
         transform:
-            translateY(12px)
-            scale(0.84);
+            translateY(-10px)
+            scale(0.86);
     }
 
-    70% {
+    72% {
         opacity: 1;
 
         transform:
-            translateY(-2px)
+            translateY(2px)
             scale(1.015);
     }
 
@@ -446,7 +435,7 @@ button {
 
 .character-file-content {
     padding:
-        12px 13px 14px;
+        11px 12px 13px;
 
     background: #ece9d8;
 
@@ -468,10 +457,10 @@ button {
 }
 
 .file-name {
+    color: #111;
+
     font-size: 13px;
     font-weight: bold;
-
-    color: #111;
 }
 
 .character-divider {
@@ -555,16 +544,18 @@ button {
 }
 
 /* ======================================================
-   MINIMIZED CHARACTER FILE BUTTON
+   MINIMIZED CHARACTER.FBX BUTTON
 ====================================================== */
 
 .minimized-file-button {
     position: absolute;
 
+    top: 2%;
     left: 2%;
-    bottom: 2%;
 
-    z-index: 20;
+    bottom: auto;
+
+    z-index: 24;
 
     min-width: 145px;
     height: 30px;
@@ -575,11 +566,10 @@ button {
     display: flex;
     align-items: center;
 
-    border:
-        1px solid #003c74;
+    border: 1px solid #003c74;
 
     border-radius:
-        3px 3px 0 0;
+        4px 4px 2px 2px;
 
     background:
         linear-gradient(
@@ -609,27 +599,24 @@ button {
     touch-action: manipulation;
 
     transition:
+        opacity 0.18s ease,
         filter 0.12s ease,
         transform 0.1s ease,
-        opacity 0.2s ease;
+        visibility 0.18s ease;
 }
 
 .minimized-file-button:hover {
-    filter:
-        brightness(1.12);
+    filter: brightness(1.12);
 }
 
 .minimized-file-button:active {
-    transform:
-        translateY(1px);
+    transform: translateY(1px);
 
-    filter:
-        brightness(0.92);
+    filter: brightness(0.92);
 }
 
 .minimized-file-button.is-hidden {
     opacity: 0;
-
     visibility: hidden;
 
     pointer-events: none;
@@ -647,7 +634,7 @@ button {
 }
 
 /* ======================================================
-   DRAG WINDOW
+   INSTRUCTION WINDOW
 ====================================================== */
 
 .drag-instruction {
@@ -656,15 +643,15 @@ button {
     left: 50%;
     bottom: 4%;
 
-    z-index: 15;
+    z-index: 20;
 
     width: min(230px, 74%);
+
+    opacity: 0;
 
     transform:
         translateX(-50%)
         translateY(8px);
-
-    opacity: 0;
 
     pointer-events: auto;
 
@@ -681,16 +668,7 @@ button {
         translateY(0);
 }
 
-.drag-instruction.is-hidden {
-    opacity: 0 !important;
-
-    transform:
-        translateX(-50%)
-        translateY(8px) !important;
-
-    pointer-events: none;
-}
-
+.drag-instruction.is-hidden,
 .drag-instruction.is-closing {
     opacity: 0 !important;
 
@@ -746,7 +724,7 @@ button {
 }
 
 /* ======================================================
-   MOBILE ROTATION BUTTONS
+   MOBILE ROTATION CONTROLS
 ====================================================== */
 
 .mobile-rotation-controls {
@@ -755,7 +733,7 @@ button {
     left: 50%;
     bottom: 2.2%;
 
-    z-index: 19;
+    z-index: 23;
 
     display: none;
 
@@ -772,8 +750,7 @@ button {
     padding:
         5px 9px;
 
-    border:
-        1px solid #003c74;
+    border: 1px solid #003c74;
 
     border-radius: 3px;
 
@@ -814,15 +791,35 @@ button {
 
 .xp-control-button:active,
 .xp-control-button.is-pressed {
-    transform:
-        translateY(1px);
+    transform: translateY(1px);
 
     box-shadow:
         inset 1px 1px 2px #7f7f7f;
 }
 
+.rotate-arrow {
+    display: inline-block;
+
+    margin:
+        0 3px;
+
+    color: #153d7a;
+
+    font-family:
+        Tahoma,
+        Verdana,
+        Arial,
+        sans-serif;
+
+    font-size: 17px;
+    font-weight: bold;
+    line-height: 0.8;
+
+    transform: translateY(1px);
+}
+
 /* ======================================================
-   CARRD EMBED LAYOUT
+   NARROW CARRD EMBEDS
 ====================================================== */
 
 @media (max-width: 900px) {
@@ -831,7 +828,6 @@ button {
         width: 88%;
         height: 100%;
 
-        object-fit: contain;
         object-position: 79% center;
     }
 
@@ -874,22 +870,14 @@ button {
 }
 
 /* ======================================================
-   MOBILE
+   ACTUAL TOUCH DEVICES ONLY
 ====================================================== */
 
-@media (max-width: 700px) {
-
-    html,
-    body {
-        /*
-        The document remains non-scrollable internally,
-        but gestures pass vertically to Carrd.
-        */
-        touch-action: pan-y;
-    }
+@media (hover: none) and (pointer: coarse) {
 
     .viewer {
         cursor: default;
+
         touch-action: pan-y;
     }
 
@@ -900,55 +888,8 @@ button {
         object-position: center;
     }
 
-    .loading-window {
-        width: min(300px, 84%);
-    }
-
-    .character-file-window {
-        top: 2%;
-        left: 2%;
-
-        width: min(165px, 40%);
-    }
-
-    .character-file-content {
-        padding:
-            8px 9px 9px;
-
-        font-size: 8.5px;
-        line-height: 1.3;
-    }
-
-    .file-number {
-        font-size: 7px;
-    }
-
-    .file-name {
-        font-size: 11px;
-    }
-
-    .character-divider {
-        margin:
-            6px 0 7px;
-    }
-
-    .character-field {
-        grid-template-columns:
-            57px 1fr;
-
-        gap: 3px;
-
-        margin-bottom: 4px;
-    }
-
-    .character-field-block {
+    .mobile-rotation-controls {
         display: flex;
-    }
-
-    .drag-instruction {
-        width: min(215px, 72%);
-
-        bottom: 8%;
     }
 
     .desktop-instruction {
@@ -959,13 +900,21 @@ button {
         display: inline;
     }
 
-    .mobile-rotation-controls {
-        display: flex;
+    .drag-instruction {
+        width: min(215px, 72%);
+
+        bottom: 8%;
     }
 
+    /*
+    Force minimized Character.FBX button to remain
+    at the top on phones and tablets.
+    */
     .minimized-file-button {
-        left: 2%;
-        bottom: 2.5%;
+        top: 2% !important;
+        left: 2% !important;
+
+        bottom: auto !important;
 
         min-width: 0;
         width: auto;
@@ -973,21 +922,35 @@ button {
 
         font-size: 9px;
     }
+}
 
-    .xp-titlebar-text {
-        font-size: 10px;
+/* ======================================================
+   MOUSE / LAPTOP DEVICES
+====================================================== */
+
+@media (hover: hover) and (pointer: fine) {
+
+    .mobile-rotation-controls {
+        display: none !important;
     }
 
-    .drag-window-content {
-        font-size: 10px;
+    .desktop-instruction {
+        display: inline;
+    }
+
+    .mobile-instruction {
+        display: none;
     }
 }
 
 /* ======================================================
-   VERY SMALL SCREENS
+   VERY SMALL TOUCH SCREENS
 ====================================================== */
 
-@media (max-width: 420px) {
+@media
+    (max-width: 420px)
+    and (hover: none)
+    and (pointer: coarse) {
 
     .character-file-window {
         width: min(150px, 42%);
@@ -1035,97 +998,4 @@ button {
         transition: none;
         animation: none;
     }
-}
-
-/* ======================================================
-   MINIMIZED FILE BUTTON — TOP POSITION
-====================================================== */
-
-.minimized-file-button {
-    top: 2%;
-    bottom: auto;
-}
-
-/* Keep it neatly positioned on mobile */
-@media (max-width: 700px) {
-    .minimized-file-button {
-        top: 2%;
-        bottom: auto;
-        left: 2%;
-    }
-}
-
-/* ======================================================
-   DEVICE-SPECIFIC FIXES
-   Uses touch capability instead of iframe width
-====================================================== */
-
-/* Never show mobile rotation controls on mouse/laptop devices */
-@media (hover: hover) and (pointer: fine) {
-
-    .mobile-rotation-controls {
-        display: none !important;
-    }
-
-    .desktop-instruction {
-        display: inline !important;
-    }
-
-    .mobile-instruction {
-        display: none !important;
-    }
-}
-
-
-/* Only show mobile controls on actual touch devices */
-@media (hover: none) and (pointer: coarse) {
-
-    .viewer {
-        cursor: default;
-        touch-action: pan-y;
-    }
-
-    .mobile-rotation-controls {
-        display: flex !important;
-    }
-
-    .desktop-instruction {
-        display: none !important;
-    }
-
-    .mobile-instruction {
-        display: inline !important;
-    }
-
-    /* Keep minimized Character.FBX button at the top-left */
-    .minimized-file-button {
-        top: 2% !important;
-        left: 2% !important;
-
-        bottom: auto !important;
-    }
-}
-
-
-/* Consistent retro arrows instead of emoji rendering */
-.rotate-arrow {
-    display: inline-block;
-
-    margin:
-        0 3px;
-
-    font-family:
-        Tahoma,
-        Verdana,
-        Arial,
-        sans-serif;
-
-    font-size: 17px;
-    font-weight: bold;
-    line-height: 0.8;
-
-    color: #153d7a;
-
-    transform:
-        translateY(1px);
 }
