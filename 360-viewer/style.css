@@ -439,9 +439,11 @@ button {
 }
 
 .threat-level-low {
-    color: #237a24;
+
+    color: #ff9ccf;
 
     font-weight: bold;
+
 }
 
 /* ======================================================
